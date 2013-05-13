@@ -229,7 +229,8 @@ Proof with auto.
   induction Wf_typ; intros Fr; simpl...
   Case "wf_typ_var".
     assert (X0 `in` (dom E))...
-    eapply binds_In; eauto. fsetdec.
+    eapply binds_In; eauto.
+    assert (X <> X0) by fsetdec. fsetdec.
   Case "wf_typ_all".
     apply notin_union...
     pick fresh Y.
