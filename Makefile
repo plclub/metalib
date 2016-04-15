@@ -16,6 +16,11 @@
 ## Paths to executables. Do not include options here.
 ## Modify these to suit your Coq installation, if necessary.
 
+## If you get warnings such as:
+## *** Warning: in file AssocList.v, library CoqFSetDecide is required and has not been found in the loadpath!
+## you can use a shell variable to set the load path. (Somehow the -I below is being ignored.)
+## export COQPATH=.
+
 COQC = coqc
 COQDEP = coqdep
 COQDOC = coqdoc
