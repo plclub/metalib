@@ -66,14 +66,14 @@ Require Import LibTactics.
 
     Definition map (f1 : A -> A) (f2: B -> B) (E : list (asn A B)) : list (asn A B) :=
       List.map (fun x => match x with 
-                         | VarAsn x a => VarAsn B x (f1 a)
-                         | AltAsn b   => AltAsn A (f2 b)
+                         | VarAsn _ x a => VarAsn B x (f1 a)
+                         | AltAsn _ b   => AltAsn A (f2 b)
                          end) E.
 
     Fixpoint dom (A: Set) (B: Set) (E : list (asn A B)) {struct E} : atoms :=
       match E with
         | nil => empty
-        | (VarAsn x _) :: E' => add x (dom E')
+        | (VarAsn _ x _) :: E' => add x (dom E')
         | _ :: E' => dom E'
       end.
 
@@ -103,8 +103,8 @@ Require Import LibTactics.
     Fixpoint erase (E : list (asn A B)) : list B :=
       match E with 
       | nil => nil
-      | (AltAsn b) :: E => b :: erase E
-      | (VarAsn x a) :: E => erase E 
+      | (AltAsn _ b) :: E => b :: erase E
+      | (VarAsn _ x a) :: E => erase E 
       end.
      
     Unset Implicit Arguments.
@@ -917,3 +917,4 @@ Require Import LibTactics.
 
 
 
+ 

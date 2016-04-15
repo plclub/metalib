@@ -9,6 +9,7 @@
 
 Require Export LibDefaultSimp.
 Require Import Metatheory.
+Require Import Omega.
 
 
 (* ********************************************************************** *)

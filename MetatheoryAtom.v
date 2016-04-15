@@ -18,6 +18,7 @@ Require Import FSetExtra.
 Require Import FSetWeakNotin.
 Require Import LibTactics.
 
+Require Import Omega.
 
 (* ********************************************************************** *)
 (** * Defining atoms *)
