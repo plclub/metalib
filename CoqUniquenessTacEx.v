@@ -28,10 +28,11 @@ Scheme le_ind' := Induction for le Sort Prop.
 
 Lemma le_unique : forall (x y : nat) (p q: x <= y), p = q.
 Proof.
-  induction p using le_ind'. Admitted. (* ; uniqueness 1. 
+  induction p using le_ind';
+  uniqueness 1;
   assert False by omega; intuition.
-  assert False by omega; intuition. 
-Qed. *)
+  
+Qed. 
 
 
 (* ********************************************************************** *)
@@ -55,15 +56,15 @@ Section Uniqueness_Of_SetoidList_Proofs.
 
   Theorem lelistA_unique :
     forall (x : A) (xs : list A) (p q : lelistA R x xs), p = q.
-  Proof. Admitted. (* induction p using lelistA_ind'; uniqueness 1. Qed. *)
+  Proof. induction p using lelistA_ind'; uniqueness 1. Qed.
 
   Theorem sort_unique :
     forall (xs : list A) (p q : sort R xs), p = q.
-  Proof. Admitted. (* induction p using sort_ind'; uniqueness 1. apply lelistA_unique. Qed. *)
+  Proof. induction p using sort_ind'; uniqueness 1. apply lelistA_unique. Qed.
 
   Theorem eqlistA_unique :
     forall (xs ys : list A) (p q : eqlistA R xs ys), p = q.
-  Proof. Admitted. (* induction p using eqlistA_ind'; uniqueness 2. Qed. *)
+  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed. 
 
 End Uniqueness_Of_SetoidList_Proofs.
 
@@ -81,4 +82,4 @@ Inductive vector (A : Type) : nat -> Type :=
 
 Theorem vector_O_eq : forall (A : Type) (v : vector A 0),
   v = vnil _.
-Proof. Admitted. (* intros. uniqueness 1. Qed. *)
+Proof. intros. uniqueness 1. Qed.

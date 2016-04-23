@@ -204,11 +204,11 @@ Ltac uniqueness icount :=
                                (tuple_rev rind_types ainds))
                   (@eq_rect (tuple rind_types)
                             rinds
-                            (fun rinds =>
+                            (fun rinds2 =>
                               apply_tuple (list_rev rind_types)
                                           sort
                                           pred
-                                          (tuple_rev rind_types rinds))
+                                          (tuple_rev rind_types rinds2))
                             lhs
                             ainds
                             eqpf)
@@ -251,11 +251,11 @@ Ltac uniqueness icount :=
       over that equality. *)
   change lhs with (@eq_rect (tuple rind_types)
                             rinds
-                            (fun rinds =>
+                            (fun rinds2 =>
                               apply_tuple (list_rev rind_types)
                                           sort
                                           pred
-                                          (tuple_rev rind_types rinds))
+                                          (tuple_rev rind_types rinds2))
                             lhs
                             rinds
                             (refl_equal rinds));
