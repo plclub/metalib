@@ -230,14 +230,14 @@ Section Uniqueness_Of_SetoidList_Proofs.
 
   Theorem lelistA_unique :
     forall (x : A) (xs : list A) (p q : lelistA R x xs), p = q.
-  Proof. induction p using lelistA_ind'. Admitted.   (* was uniqueness 1 *)
+  Proof. induction p using lelistA_ind'; uniqueness 1. Qed. 
 
   Theorem sort_unique :
     forall (xs : list A) (p q : sort R xs), p = q.
-  Proof. induction p using sort_ind'. Admitted. (* uniqueness 1. apply lelistA_unique. Qed. *)
+  Proof. induction p using sort_ind'; uniqueness 1. apply lelistA_unique. Qed.
 
   Theorem eqlistA_unique :
     forall (xs ys : list A) (p q : eqlistA R xs ys), p = q.
-  Proof. induction p using eqlistA_ind'. Admitted. (* uniqueness 2. Qed. *)
+  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed. 
 
 End Uniqueness_Of_SetoidList_Proofs.
