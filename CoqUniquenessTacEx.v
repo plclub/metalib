@@ -9,7 +9,7 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Lists.SetoidList.
 Require Import Coq.omega.Omega.
 
-Require Import CoqUniquenessTac.
+Require Import Metalib.CoqUniquenessTac.
 
 
 (* *********************************************************************** *)
@@ -31,8 +31,8 @@ Proof.
   induction p using le_ind';
   uniqueness 1;
   assert False by omega; intuition.
-  
-Qed. 
+
+Qed.
 
 
 (* ********************************************************************** *)
@@ -64,7 +64,7 @@ Section Uniqueness_Of_SetoidList_Proofs.
 
   Theorem eqlistA_unique :
     forall (xs ys : list A) (p q : eqlistA R xs ys), p = q.
-  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed. 
+  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed.
 
 End Uniqueness_Of_SetoidList_Proofs.
 

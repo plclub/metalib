@@ -56,7 +56,7 @@
     directory to compile the Metatheory library.
 *)
 
-Require Import Metatheory.
+Require Import Metalib.Metatheory.
 
 
 (*************************************************************************)
@@ -1215,7 +1215,7 @@ Proof.
   induction H; intros G Eq Uniq; subst.
  (* FILL IN HERE (and delete "Admitted") *) Admitted.
 
-     
+
 
 (** *** Example
 
@@ -1339,7 +1339,7 @@ Lemma typing_c_subst : forall (E F : env) e u S T (z : atom),
 Proof.
 (* FILL IN HERE (and delete "Admitted") *) Admitted.
 
-        
+
 (** *** Exercise
 
     Complete the proof of the substitution lemma stated in the form we

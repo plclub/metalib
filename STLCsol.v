@@ -56,7 +56,7 @@
     directory to compile the Metatheory library.
 *)
 
-Require Import Metatheory.
+Require Import Metalib.Metatheory.
 
 
 (*************************************************************************)
@@ -1330,7 +1330,7 @@ Proof.
       apply binds_weaken. apply H0.
   Case "typing_abs_c".
 
-     
+
     pick fresh x and apply typing_abs_c.
     rewrite_env (((x ~ T1) ++ G) ++ F ++ E).
     apply H0.
@@ -1494,7 +1494,7 @@ Proof.
     subst.
     simpl.
 
-        
+
     pick fresh y and apply typing_abs_c.
     rewrite subst_open_var_c.
     rewrite_env (((y ~ T1) ++ F) ++ E).

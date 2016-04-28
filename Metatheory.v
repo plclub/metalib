@@ -10,11 +10,11 @@ Require Export Coq.Arith.Arith.
 Require Export Coq.FSets.FSets.
 Require Export Coq.Lists.List.
 
-Require Export AssocList.
-Require Export CoqEqDec.
-Require Export CoqListFacts.
-Require Export LibTactics.
-Require Export MetatheoryAtom.
+Require Export Metalib.AssocList.
+Require Export Metalib.CoqEqDec.
+Require Export Metalib.CoqListFacts.
+Require Export Metalib.LibTactics.
+Require Export Metalib.MetatheoryAtom.
 
 
 (* ********************************************************************** *)
@@ -292,5 +292,5 @@ Ltac apply_fresh_base H gather_vars atom_name :=
 
 (* SCW added this one for list support *)
 Set Implicit Arguments.
-Definition union_map (A:Set) (f:A -> vars) (l:list A) := 
+Definition union_map (A:Set) (f:A -> vars) (l:list A) :=
  (List.fold_right (fun t acc => f t \u acc) {}) l.

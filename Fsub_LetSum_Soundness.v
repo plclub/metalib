@@ -12,7 +12,7 @@
       - #<a href="##preservation">Preservation</a>#
       - #<a href="##progress">Progress</a># *)
 
-Require Export Fsub_LetSum_Lemmas.
+Require Export Metalib.Fsub_LetSum_Lemmas.
 
 
 (* ********************************************************************** *)

@@ -19,13 +19,13 @@ Require Import Coq.FSets.FSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 
-Require Import CoqFSetDecide.
-Require Import CoqListFacts.
+Require Import Metalib.CoqFSetDecide.
+Require Import Metalib.CoqListFacts.
 
-Require Import AssocList.
-Require Import MetatheoryAtom.
+Require Import Metalib.AssocList.
+Require Import Metalib.MetatheoryAtom.
 Import AtomSetImpl.
-Require Import LibTactics.
+Require Import Metalib.LibTactics.
 
 
 (* *********************************************************************** *)
