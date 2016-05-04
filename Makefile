@@ -93,7 +93,7 @@ coq: $(COQMKFILENAME)
 	@$(MAKE) -f CoqSrc.mk
 
 $(COQMKFILENAME): Makefile
-	{ echo "-R . $(LIBNAME) " ; find -name '*.v' -print; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
+	{ echo "-R . $(LIBNAME) " ; ls *.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
 
 # TODO: in theory, coq_makefile creates targets for documentation, so we should be able to use it instead of handwritten rules
 doc:
