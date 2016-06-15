@@ -8,7 +8,7 @@
 
 Require Import Coq.FSets.FSets.
 
-Require Import CoqFSetInterface.
+Require Import Metalib.CoqFSetInterface.
 
 
 (* *********************************************************************** *)

@@ -10,13 +10,13 @@ Require Export Coq.Arith.Arith.
 Require Export Coq.FSets.FSets.
 Require Export Coq.Lists.List.
 
-Require Export CoqEqDec.
-Require Export CoqListFacts.
-Require Export LibTactics.
-Require Export MetatheoryAtom.
+Require Export Metalib.CoqEqDec.
+Require Export Metalib.CoqListFacts.
+Require Export Metalib.LibTactics.
+Require Export Metalib.MetatheoryAtom.
 (* Require Export MetatheoryEnv. *)
 
-Require Export AssumeList.
+Require Export Metalib.AssumeList.
 
 (* ********************************************************************** *)
 (** * Decidable equality *)
@@ -94,7 +94,7 @@ Open Scope set_hs_scope.
     standard recursive notation for lists, e.g., the one found in the
     Program library of Coq's standard library. *)
 
-(* Notation "[ x ]" := (EnvImpl.one x) : env_scope. 
+(* Notation "[ x ]" := (EnvImpl.one x) : env_scope.
 
 Open Scope env_scope.
 *)

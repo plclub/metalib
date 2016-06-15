@@ -12,11 +12,11 @@ Require Import Coq.Classes.EquivDec.
 Require Import Coq.Lists.List.
 Require Import Coq.Structures.DecidableTypeEx.
 
-Require Import CoqFSetDecide.
-Require Import CoqListFacts.
-Require Import FSetExtra.
-Require Import FSetWeakNotin.
-Require Import LibTactics.
+Require Import Metalib.CoqFSetDecide.
+Require Import Metalib.CoqListFacts.
+Require Import Metalib.FSetExtra.
+Require Import Metalib.FSetWeakNotin.
+Require Import Metalib.LibTactics.
 
 Require Import Omega.
 

@@ -126,6 +126,8 @@ Open Scope list_scope.
 (** [dom] computes the domain of an assumption list, i.e., the
     set consisting of its keys. *)
 
+(* FIXME: commented out by simplicity, but the code should be fixed *)
+(*
 Fixpoint dom
   (A B : Type) (E : list (asn A B))
   : KeySet.t :=
@@ -1552,4 +1554,7 @@ Hint Resolve @binds_weaken.
 
 Hint Immediate @binds_remove_mid @binds_In.
 
+*)
+
 End Make.
+

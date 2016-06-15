@@ -21,7 +21,7 @@
       - #<a href="##regularity">Regularity lemmas</a>#
       - #<a href="##auto">Automation</a># *)
 
-Require Export Fsub_LetSum_Infrastructure.
+Require Export Metalib.Fsub_LetSum_Infrastructure.
 
 
 (* ********************************************************************** *)

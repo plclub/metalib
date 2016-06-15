@@ -20,9 +20,9 @@ Require Import Coq.FSets.FSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 
-Require Import CoqFSetDecide.
-Require Import CoqListFacts.
-Require Import LibTactics.
+Require Import Metalib.CoqFSetDecide.
+Require Import Metalib.CoqListFacts.
+Require Import Metalib.LibTactics.
 
 
 (* *********************************************************************** *)
@@ -635,7 +635,7 @@ Section BindsProperties.
     binds x a (y ~ b) ->
     x = y.
   Proof.
-    clear. intros H. inversion H as [HEq | HIn]. 
+    clear. intros H. inversion H as [HEq | HIn].
       inversion HEq; intuition.
       inversion HIn.
   Qed.

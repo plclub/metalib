@@ -7,8 +7,8 @@
 
 (** A library of code for supporting LNgen. *)
 
-Require Export LibDefaultSimp.
-Require Import Metatheory.
+Require Export Metalib.LibDefaultSimp.
+Require Import Metalib.Metatheory.
 Require Import Omega.
 
 

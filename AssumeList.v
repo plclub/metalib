@@ -14,13 +14,13 @@ Require Import Coq.FSets.FSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 
-Require Import CoqFSetDecide.
-Require Import CoqListFacts.
-Require Import LibTactics.
+Require Import Metalib.CoqFSetDecide.
+Require Import Metalib.CoqListFacts.
+Require Import Metalib.LibTactics.
 
-Require Import MetatheoryAtom.
+Require Import Metalib.MetatheoryAtom.
 Import AtomSetImpl.
-Require Import LibTactics.
+Require Import Metalib.LibTactics.
 
 
 (* *********************************************************************** *)
@@ -65,7 +65,7 @@ Require Import LibTactics.
     .
 
     Definition map (f1 : A -> A) (f2: B -> B) (E : list (asn A B)) : list (asn A B) :=
-      List.map (fun x => match x with 
+      List.map (fun x => match x with
                          | VarAsn _ x a => VarAsn B x (f1 a)
                          | AltAsn _ b   => AltAsn A (f2 b)
                          end) E.
@@ -96,17 +96,17 @@ Require Import LibTactics.
           uniq E ->
           x `notin` dom E ->
           uniq ((x ~~ a) ++ E)
-      | uniq_alt : forall b E, 
-          uniq E -> 
+      | uniq_alt : forall b E,
+          uniq E ->
           uniq (one (AltAsn A b) ++ E).
 
     Fixpoint erase (E : list (asn A B)) : list B :=
-      match E with 
+      match E with
       | nil => nil
       | (AltAsn _ b) :: E => b :: erase E
-      | (VarAsn _ x a) :: E => erase E 
+      | (VarAsn _ x a) :: E => erase E
       end.
-     
+
     Unset Implicit Arguments.
   End Definitions.
 
@@ -462,7 +462,7 @@ Require Import LibTactics.
       uniq (E ++ F) -> uniq E.
     Proof.
       clear. intros H; induction E as [ | a E']; simpl_asnlist in *.
-        apply uniq_nil. 
+        apply uniq_nil.
         destruct a.
         apply uniq_push; inversion H; subst.
           auto.
@@ -507,7 +507,7 @@ Require Import LibTactics.
             intuition.
             rewrite disjoint_one_l in Hd. simpl_asnlist. fsetdec.
         apply uniq_alt.
-          inversion HE; subst. 
+          inversion HE; subst.
             intuition.
     Qed.
 
@@ -870,9 +870,9 @@ Require Import LibTactics.
         unfold binds in *. simpl. intros [? | ?].
           destruct a0.
              inversion H; subst.
-             left. congruence. 
+             left. congruence.
              inversion H.
-          destruct a0. 
+          destruct a0.
             right. auto.
             right. auto.
     Qed.
@@ -889,8 +889,8 @@ Require Import LibTactics.
       clear. induction E as [ | y ? F ]; intros J; simpl_asnlist.
       analyze_binds J.
       analyze_binds J; subst; auto with set.
-        inversion H0;subst. simpl. fsetdec. 
-          inversion H.  
+        inversion H0;subst. simpl. fsetdec.
+          inversion H.
     Qed.
 
     Lemma fresh_app_l :
@@ -917,4 +917,3 @@ Require Import LibTactics.
 
 
 
- 

@@ -10,7 +10,7 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Lists.SetoidList.
 
-Require Import CoqUniquenessTac.
+Require Import Metalib.CoqUniquenessTac.
 
 Open Scope list_scope.
 
@@ -126,7 +126,7 @@ Qed.
 
 Lemma InA_iff_In : forall (A : Type) (x : A) (xs : list A),
   InA (@eq _) x xs <-> In x xs.
-Proof. 
+Proof.
   split; auto using InA_In.
   apply SetoidList.In_InA. apply eq_equivalence.
 Qed.
@@ -230,7 +230,7 @@ Section Uniqueness_Of_SetoidList_Proofs.
 
   Theorem lelistA_unique :
     forall (x : A) (xs : list A) (p q : lelistA R x xs), p = q.
-  Proof. induction p using lelistA_ind'; uniqueness 1. Qed. 
+  Proof. induction p using lelistA_ind'; uniqueness 1. Qed.
 
   Theorem sort_unique :
     forall (xs : list A) (p q : sort R xs), p = q.
@@ -238,6 +238,6 @@ Section Uniqueness_Of_SetoidList_Proofs.
 
   Theorem eqlistA_unique :
     forall (xs ys : list A) (p q : eqlistA R xs ys), p = q.
-  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed. 
+  Proof. induction p using eqlistA_ind'; uniqueness 2. Qed.
 
 End Uniqueness_Of_SetoidList_Proofs.

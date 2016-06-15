@@ -16,7 +16,7 @@
       - #<a href="##auto">Automation</a>#
 *)
 
-Require Export Metatheory.
+Require Export Metalib.Metatheory.
 
 
 (* ********************************************************************** *)

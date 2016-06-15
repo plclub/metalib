@@ -14,7 +14,7 @@
 
 Require Import Coq.FSets.FSetInterface.
 
-Require Import CoqFSetDecide.
+Require Import Metalib.CoqFSetDecide.
 
 
 (* *********************************************************************** *)
