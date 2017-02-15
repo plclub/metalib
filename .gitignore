@@ -2,5 +2,6 @@
 /*.vo
 /*.glob
 /.*.aux
+/*.v.d
 CoqSrc.mk
 _CoqProject
