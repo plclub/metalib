@@ -231,7 +231,7 @@ Ltac beautify_fset V :=
     set, but users are free (and expected) to redefine it. *)
 
 Ltac gather_atoms :=
-  constr:empty.
+  constr:(empty).
 
 Tactic Notation "pick" "fresh" ident(Y) "for" constr(L) :=
   let Fr := fresh "Fr" in

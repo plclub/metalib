@@ -56,6 +56,19 @@ Ltac eapply_first_hyp :=
     | H : _ |- _ => eapply H
   end.
 
+(** These tactics are the same as above, but are tailored for proofs by
+    well-founded induction.  *)
+
+Ltac apply_first_lt_hyp :=
+  match reverse goal with
+  | H : forall m:nat, m < ?a -> ?b |- _ =>  apply H
+  end.
+
+Ltac eapply_first_lt_hyp :=
+  match reverse goal with
+  | H : forall m:nat, m < ?a -> ?b |- _ =>  eapply H
+  end.
+
 
 (* *********************************************************************** *)
 (** * Delineating cases in proofs *)

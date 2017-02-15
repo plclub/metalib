@@ -94,7 +94,7 @@ Definition one (C : Type) (item : C) : list C := cons item nil.
 
 Notation "x ~ a" := (one (x, a)) (at level 50) : list_scope.
 
-Arguments Scope app [ type_scope list_scope list_scope ].
+Arguments app _%type_scope _%list_scope _%list_scope.
 
 Open Scope list_scope.
 

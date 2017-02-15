@@ -467,7 +467,7 @@ Hint Constructors lc.
     notation, confined to this section. *)
 
 Section BasicOperations.
-Notation Local "{ k ~> u } t" := (open_rec k u t) (at level 67).
+Local Notation "{ k ~> u } t" := (open_rec k u t) (at level 67).
 
 (** The first property we would like to show is the analogue to
     [subst_fresh]: index substitution has no effect for closed terms.
@@ -761,7 +761,7 @@ Hint Constructors lc_c.
    properties about it and the new version of lc_c. *)
 
 Section CofiniteQuantification.
-Notation Local "{ k ~> u } t" := (open_rec k u t) (at level 67).
+Local Notation "{ k ~> u } t" := (open_rec k u t) (at level 67).
 
 (* With this new definition, we can almost use the same proof for
    [open_rec_lc], we only need one change. We need to add the line

@@ -86,8 +86,8 @@ Require Import Metalib.LibTactics.
     Definition bindsAlt (b : B) (E : list (asn A B)) : Prop :=
       List.In (AltAsn A b) E.
 
-    Notation Local "x ~~ a" := (one (VarAsn B x a)) (at level 68).
-    Notation Local "x `notin` E" := (~ In x E) (at level 70).
+    Local Notation "x ~~ a" := (one (VarAsn B x a)) (at level 68).
+    Local Notation "x `notin` E" := (~ In x E) (at level 70).
 
     Inductive uniq : list (asn A B) -> Prop :=
       | uniq_nil :
@@ -119,22 +119,22 @@ Require Import Metalib.LibTactics.
       lemmas below more readable.  The notations are local so that
       users of this functor may choose their own notations. *)
 
-  Notation Local "[ i ]" := (one i).
-(*  Notation Local "x ~~ T" := (one (VarAsn B x T)) (at level 68). *)
+  Local Notation "[ i ]" := (one i).
+(*  Local Notation "x ~~ T" := (one (VarAsn B x T)) (at level 68). *)
 
-  Notation Local "E `union` F" :=
+  Local Notation "E `union` F" :=
     (union E F)
     (at level 65, right associativity).
-  Notation Local "x `in` E" :=
+  Local Notation "x `in` E" :=
     (In x E)
     (at level 70).
-  Notation Local "x `notin` E" :=
+  Local Notation "x `notin` E" :=
     (~ In x E)
     (at level 70).
-  Notation Local "E [=] F" :=
+  Local Notation "E [=] F" :=
     (Equal E F)
     (at level 70, no associativity).
-  Notation Local "E [<=] F" :=
+  Local Notation "E [<=] F" :=
     (Subset E F)
     (at level 70, no associativity).
 

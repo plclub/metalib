@@ -58,14 +58,14 @@ Fixpoint tr_list_rev (A : Type) (xs : list A) (acc : list A) : list A :=
     | cons y ys => tr_list_rev A ys (cons y acc)
   end.
 
-Implicit Arguments tr_list_rev [ A ].
+Arguments tr_list_rev [ A ].
 
 (** Reverse a list. *)
 
 Definition list_rev (A : Type) (xs : list A) : list A :=
   tr_list_rev xs nil.
 
-Implicit Arguments list_rev [ A ].
+Arguments list_rev [ A ].
 
 (** Reverse a heterogeneous list onto the given accumulator. *)
 
