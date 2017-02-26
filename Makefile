@@ -90,7 +90,7 @@ all: coq # Metatheory.vo MetatheoryAlt.vo LibLNgen.vo
 #coq: $(VOFILES)
 coq: $(COQMKFILENAME)
 	# FIXME: loose integration right now, but when the doc works we should be able to simply include the generated makefile
-	@$(MAKE) -f CoqSrc.mk 
+	@$(MAKE) -f CoqSrc.mk
 
 $(COQMKFILENAME): Makefile
 	{ echo "-R . $(LIBNAME) " ; ls *.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
@@ -118,10 +118,11 @@ $(DOCDIR):
 
 ############################################################################
 
-.depend: $(VFILES) Makefile
-	$(COQDEP) $(INCFLAGS) $(VFILES) > .depend
-
-include .depend
+# Not necessary anymore
+# .depend: $(VFILES) Makefile
+# 	$(COQDEP) $(INCFLAGS) $(VFILES) > .depend
+#
+# include .depend
 
 ############################################################################
 
