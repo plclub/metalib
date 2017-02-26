@@ -286,11 +286,16 @@ Inductive full_eval : tm -> tm -> Prop :=
     use the command [Check x.]  If you want to see the
     definition of an identifier [x], you can use the command
     [Print x.]
+
+    For instance, try uncommenting the following code.
 *)
+
+(*
 Check tm_if.
 Check m_step.
 Check value.
 Print value.
+*)
 
 (**************************************************************)
 (** * Proofs *)
@@ -384,12 +389,12 @@ Proof.
 
   (** By [e_succ], in order to prove our conclusion, it suffices
       to prove that [eval (tm_pred (tm_succ t)) t]. *)
-  Check e_succ.
+  (* Check e_succ. *)
   apply e_succ.
 
   (** That, in turn, can be shown by [e_predsucc], if we are
       able to show that [nvalue t]. *)
-  Check e_predsucc.
+  (* Check e_predsucc. *)
   apply e_predsucc.
 
   (** But, in fact, we assumed [nvalue t]. *)
@@ -470,13 +475,13 @@ Proof.
       and
         [eval t' (tm_succ t)].
       Let us choose [t'] to be [tm_succ t]. *)
-  Check m_step.
+  (* Check m_step. *)
   apply m_step with (t' := tm_succ t).
 
     (** By the lemma [e_succ_pred_succ], to show
           [eval (tm_succ (tm_pred (tm_succ t))) (tm_succ t)],
         it suffices to show [nvalue t]. *)
-    Check e_succ_pred_succ.
+    (* Check e_succ_pred_succ. *)
     apply e_succ_pred_succ.
 
     (** And, in fact, we assumed [nvalue t]. *)
@@ -484,7 +489,7 @@ Proof.
 
     (** Moreover, by the rule [m_refl], we also may conclude
         [eval (tm_succ t) (tm_succ t)]. *)
-    Check m_refl.
+    (* Check m_refl. *)
     apply m_refl.
 Qed.
 
@@ -494,13 +499,14 @@ Qed.
     that take the witness of the quantifier as an argument.
     Similarly, proofs of implications are functions that take
     one proof as an argument and return another proof.  Observe
-    the types of the following terms.
+    the types of the following terms (uncomment the following).
 *)
-
+(*
 Check (e_succ_pred_succ).
 Check (e_succ_pred_succ tm_zero).
 Check (n_zero).
 Check (e_succ_pred_succ tm_zero n_zero).
+*)
 
 (** *** Example
     Any tactic like [apply] that takes the name of a constructor
@@ -522,17 +528,17 @@ Lemma m_succ_pred_succ_alt : forall t,
 Proof.
   intros t Hn.
 
-  Check m_step.
+  (* Check m_step. *)
   apply (m_step
          (tm_succ (tm_pred (tm_succ t)))
          (tm_succ t)
          (tm_succ t)
         ).
 
-    Check e_succ_pred_succ.
+    (* Check e_succ_pred_succ. *)
     apply (e_succ_pred_succ t Hn).
 
-    Check m_refl.
+    (* Check m_refl. *)
     apply (m_refl (tm_succ t)).
 Qed.
 
@@ -791,7 +797,7 @@ Lemma destruct_example : forall bv t t' t'',
   eval_many t t''.
 Proof.
   intros bv t t' t'' Hbv H. destruct H as [ H1 H2 ].
-    Show 2.
+    (* Show 2. *)
     unfold value. left. apply Hbv.
     apply m_two with (t2 := t').
       apply H1.

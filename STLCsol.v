@@ -200,7 +200,7 @@ Notation "[ z ~> u ] e" := (subst z u e) (at level 68).
 *)
 
 Parameter Z : atom.
-Check (Y == Z).
+(* Check (Y == Z). *)
 
 (** The decidable atom equality function returns a sum. If the two
     atoms are equal, the left branch of the sum is returned, carrying
@@ -775,7 +775,7 @@ Proof.
       auto.
   Case "lc_abs".
     simpl.
-    Print lc_abs.
+    (* Print lc_abs. *)
     apply lc_abs with (x:=x0).
     apply subst_notin_fv.
     auto.
@@ -2092,7 +2092,7 @@ Proof.
     SCase "body typeable".
       left.
       exists (typ_arrow T S).
-      Check (typing_abs_c L E (abs T e) T S).
+      (* Check (typing_abs_c L E (abs T e) T S). *)
       pick fresh z and apply typing_abs_c.
       apply typing_c_rename with (x := x); eauto.
     SCase "body not typeable".
