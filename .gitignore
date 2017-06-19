@@ -1,7 +1,8 @@
-/*.v.d
-/*.vo
-/*.glob
-/.*.aux
-/*.v.d
+*.v.d
+*.vo
+*.glob
+.*.aux
+*.v.d
+*.bak
 CoqSrc.mk
 _CoqProject

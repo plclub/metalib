@@ -4,7 +4,7 @@
 #    all           - the default target; synonym for 'coq'
 #    coq           - builds all .vo files
 #    doc           - synonym for 'documentation'
-#    documentation - builds all html documentation
+#    install       - copy to coq library location
 #    clean         - removes generated files
 #
 #  Other targets (intended to be used by the developers of this library):
@@ -34,95 +34,29 @@ LIBNAME=Metalib
 
 COQMKFILENAME=CoqSrc.mk
 
-## Include directories, one per line.
-
-INCDIRS = \
-	.
-
-## Directory where generated HTML documentation should go.
-
-DOCDIR = doc/html
-
-## List of files to be compiled and documented.
-# TODO: should be useless once we get coq_makefile to compile the documentation as well
-
-FILES = \
-	AssocList \
-	CoqEqDec \
-	CoqFSetDecide \
-	CoqFSetInterface \
-	CoqListFacts \
-	CoqUniquenessTac \
-	CoqUniquenessTacEx \
-	FSetExtra \
-	FSetWeakNotin \
-	LibDefaultSimp \
-	LibLNgen \
-	LibTactics \
-	\
-	MetatheoryAtom \
-	Metatheory \
-	\
-	AssumeList \
-	MetatheoryAlt \
-	\
-	Fsub_LetSum_Definitions \
-	Fsub_LetSum_Infrastructure \
-	Fsub_LetSum_Lemmas \
-	Fsub_LetSum_Soundness \
-	\
-	CoqIntro \
-	STLCsol \
-
-## Lists calculated from the above.
-
-VFILES   = $(foreach i, $(FILES), $(i).v)
-VOFILES  = $(foreach i, $(FILES), $(i).vo)
-INCFLAGS = $(foreach i, $(INCDIRS), -I $(i))
 
 ############################################################################
 
-.PHONY: all clean coq dist doc documentation gens
-.SUFFIXES: .v .vo
+.PHONY: all clean coq dist doc gens
+.SUFFIXES: .v .vo .v.d .v.glob
 
-all: coq # Metatheory.vo MetatheoryAlt.vo LibLNgen.vo
-
-#coq: $(VOFILES)
-coq: $(COQMKFILENAME)
-	# FIXME: loose integration right now, but when the doc works we should be able to simply include the generated makefile
-	@$(MAKE) -f CoqSrc.mk
+all: coq
 
 $(COQMKFILENAME): Makefile
-	{ echo "-R . $(LIBNAME) " ; ls *.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
+	{ echo "-R $(LIBNAME) $(LIBNAME) " ; ls $(LIBNAME)/*.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
 
-# TODO: in theory, coq_makefile creates targets for documentation, so we should be able to use it instead of handwritten rules
+coq: $(COQMKFILENAME)
+	@$(MAKE) -f $(COQMKFILENAME)
+
 doc:
-	+make documentation
+	@$(MAKE) -f $(COQMKFILENAME) html
 
-documentation: $(DOCDIR) $(VOFILES)
-	$(COQDOC) -g --quiet --noindex --html -d $(DOCDIR) $(VFILES)
-	cp -f custom.css $(DOCDIR)/coqdoc.css
+install:
+	@$(MAKE) -f $(COQMKFILENAME) install
 
 clean:
-	#rm -f *.vo *.glob *.cmi *.cmx *.o
-	@$(MAKE) -f CoqSrc.mk clean
-	rm -rf $(DOCDIR)
+	@$(MAKE) -f $(COQMKFILENAME) clean
 
-############################################################################
-
-%.vo: %.v Makefile
-	$(COQC) -q $(INCFLAGS) $<
-
-$(DOCDIR):
-	mkdir -p $(DOCDIR)
-
-############################################################################
-
-# Not necessary anymore
-# .depend: $(VFILES) Makefile
-# 	$(COQDEP) $(INCFLAGS) $(VFILES) > .depend
-#
-# include .depend
 
 ############################################################################
 

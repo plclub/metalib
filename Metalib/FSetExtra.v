@@ -16,7 +16,7 @@ Require Import Metalib.CoqFSetInterface.
 
 Module Type WSfun (X : DecidableType).
 
-  Include Type CoqFSetInterface.WSfun X.
+  Include CoqFSetInterface.WSfun X.
 
   (** Definition of when two sets are disjoint. *)
 

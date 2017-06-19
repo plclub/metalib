@@ -1,24 +1,3 @@
-COMPILATION, INSTALLATION, AND DOCUMENTATION:
-
-  The main documentation for this library, including installation
-  instructions and Coq documentation, is available as a collection of
-  HTML files.  Start by opening doc/index.html in a web browser.
-
-TUTORIAL:
-
-  The metatheory library comes with a short tutorial.  The main files for
-  the tutorial are CoqIntro.v, STLC.v, and STLCsol.v.  Make sure that you've
-  compiled the library first.
-
-  Those new to Coq should start with CoqIntro.v, which is an introduction to
-  using Coq.  Solutions to the exercises here are at the end of the file.
-
-  After CoqIntro.v, the next part of the tutorial is STLC.v, an introduction
-  to mechanizing programming language definitions with binding in Coq and
-  how to reason about them.  Solutions to exercises here are in STLCsol.v.
-
-===========================================================================
-
 SOURCE CODE LICENSE:
 
   This library is distributed under the terms of the MIT License, also known
