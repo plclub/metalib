@@ -1,0 +1,15 @@
+-R Metalib Metalib
+Metalib/AssocList.v
+Metalib/CoqEqDec.v
+Metalib/CoqFSetDecide.v
+Metalib/CoqFSetInterface.v
+Metalib/CoqListFacts.v
+Metalib/CoqUniquenessTac.v
+Metalib/CoqUniquenessTacEx.v
+Metalib/FSetExtra.v
+Metalib/FSetWeakNotin.v
+Metalib/LibDefaultSimp.v
+Metalib/LibLNgen.v
+Metalib/LibTactics.v
+Metalib/Metatheory.v
+Metalib/MetatheoryAtom.v

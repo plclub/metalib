@@ -1,0 +1,175 @@
+%% This file uses the Ott tool to specify the grammar, typing and
+%% evaluation rules for STLC
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% METAVARIABLES
+
+metavar var, x, y ::=
+  {{ repr-locally-nameless }}
+  {{ com variables }}
+  {{ lex alphanum }}
+
+indexvar index, i ::=
+  {{ coq nat }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% GRAMMAR
+
+grammar
+
+typ, T :: 'typ_' ::= {{ com types }}
+  | base        ::   :: base
+  | T1 -> T2    ::   :: arrow
+
+exp, e :: ''     ::= {{ com expressions }}
+  | x              ::   :: var
+  | \ x : T . e    ::   :: abs
+    (+ bind x in e +)
+  | e1 e2          ::   :: app
+  | e1 [ x ~> e2 ] :: M :: subst
+     {{ coq (open_exp_wrt_exp [[x e1]][[e2]]) }}
+  | ( e )          :: S :: paren
+     {{ coq ([[e]]) }}
+
+terminals :: ''  ::=
+  | |-                ::   :: entails    {{ tex \vdash }}
+  | fv                ::   :: fv         {{ tex \mathsf{fv}\! }}
+
+substitutions
+  single exp x :: subst
+
+freevars
+  exp x        :: fv
+
+parsing
+  typ_arrow right typ_arrow
+
+grammar
+
+ctx, G :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
+  | empty          ::   :: Empty {{ coq nil }}
+  | G , x : T      ::   :: Cons  {{ coq (([[x]]~[[T]])++[[G]]) }}
+
+value, v :: 'v_' ::= {{ com values }}
+  | \ x : T . e   ::        :: abs
+    (+ bind x in e +)
+
+rt_val, cv :: ''     ::=
+  | closure x T rho  e  ::   :: closure
+  (+ bind x in e +)
+  | ( cv )  :: M  :: rt_val_paren {{ coq ([[cv]]) }}
+
+rt_env, rho :: ''     ::= {{ coq list ( atom * rt_val) }}
+  | ( x1 , cv1 ) .. ( xi , cvi )  ::   :: rtlist
+  | nil           ::  M  :: rtnil {{ coq nil }}
+  | rho , x ~> cv  ::  M  :: rtcons {{ coq ([[x]]~[[cv]]++[[rho]]) }}
+  | ( rho ) :: M :: rt_env_paren {{ coq ([[rho]]) }}
+
+
+formula :: 'formula_' ::=
+  | judgement                ::   :: judgement
+  | uniq G                   ::   :: uniqG
+    {{ coq uniq [[G]] }}
+  | x : T in G               ::   :: inG
+    {{ coq binds [[x]][[T]][[G]] }}
+  | x notin fv e             ::   :: fresh
+    {{ coq [[x]] \notin fv[[e]] }}
+  | x notin dom G            ::   :: notInGx
+    {{ coq ~ AtomSetImpl.In [[x]] (dom [[G]]) }}
+  | formula1 .. formulai     ::   :: dots
+subrules
+
+v <:: e
+
+embed
+{{ coq
+
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation "e1 ^ x"       := (open_exp_wrt_exp e1 (var_f x)).
+}}
+
+defns
+
+JTyping :: '' ::=
+
+defn
+G |- e : T ::   :: typing :: 'typing_'
+by
+
+uniq G
+x : T in G
+------------ :: var
+G |- x : T
+
+
+G, x:T1 |- e : T2
+-------------------------- :: abs
+G |- \x:T1. e : T1 -> T2
+
+
+G |- e1 : T1 -> T2
+G |- e2 : T1
+----------------- :: app
+G |- e1 e2 : T2
+
+defns
+
+JEval :: '' ::=
+
+defn
+e --> e' ::   :: eval :: 'eval_'
+by
+
+------------------------------- :: beta
+(\x:T1.e1) v --> e1 [x ~> v]
+
+e1 --> e1'
+----------------- :: app1
+e1 e2 --> e1' e2
+
+e2 --> e2'
+----------------- :: app2
+v e2 --> v e2'
+
+defns
+
+JBig :: '' ::=
+
+defn
+e ==> v  ::  :: bigstep :: 'bs_'
+by
+
+e1 ==> \x:T1.e1'
+e2 ==> v1
+e1' [ x ~> v1 ] ==> v2
+---------------------- :: app
+e1 e1 ==> v2
+
+----------------- :: val
+v ==> v
+
+defns
+
+Jenv :: '' ::=
+
+defn
+close rho e rt_val :: :: close :: 'close_'
+by
+
+------------------------------------ :: abs
+close rho (\x:T.e) (closure x T rho e)
+
+defn
+env_bigstep rho e cv ::  :: env_bigstep :: 'env_bs_'
+by
+
+close rho v cv
+------------------------ :: val
+env_bigstep rho v cv
+
+env_bigstep rho e1 (closure x T rho' e1')
+env_bigstep rho e2 cv'
+env_bigstep (rho', x ~> cv') e1' cv
+-------------------------------------- :: app
+env_bigstep rho e1 e2 cv
