@@ -21,39 +21,16 @@
 
 
 (*************************************************************************)
-(** * Contents
-
-    - Syntax of STLC
-    - Substitution
-    - Free variables
-    - Properties about basic operations
-
-    - Open
-    - Local closure
-    - Cofinite quantification
-    - Tactic support
-    - Typing environments
-    - Typing relation
-    - Weakening
-    - Substitution
-    - Values and evaluation
-    - Preservation
-    - Progress
-    - Additional properties
-    - Renaming
-    - Decidability of typechecking
-    - Equivalence of exist fresh and cofinite
-
-  Solutions to exercises are in [STLCsol.v].
-*)
-(*************************************************************************)
 
 
 (** First, we import a number of definitions from the Metatheory library (see
     Metatheory.v).  The following command makes those definitions available in
-    the rest of this file.  This command will only succeed if you have already
-    run "make" in the toplevel directory to compile the Metatheory library and
-    the tutorial files.
+    the rest of this file.
+
+    This command will only succeed if you have already run "make" in the
+    toplevel directory to compile the Metatheory library and the tutorial
+    files.
+
 *)
 
 Require Import Metalib.Metatheory.
@@ -61,8 +38,6 @@ Require Import Metalib.Metatheory.
 (** Next, we import the definitions of the simply-typed lambda calculus. *)
 Require Import Definitions.
 
-(** And some auxiliary lemmas about these definitions. *)
-Require Import Lemmas.
 
 (*************************************************************************)
 (** * Encoding terms in STLC *)
@@ -143,9 +118,6 @@ Definition COMB_S :=
     simplicity, we define a notation for free variable substitution that
     mimics standard mathematical notation.  *)
 
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
-
-
 (** To demonstrate how free variable substitution works, we need to
     reason about var equality.
 *)
@@ -213,7 +185,10 @@ Qed.
 Lemma subst_same : forall y e, [y ~> var_f y] e = e.
 Proof.
   (* SOLUTION *)
-  induction e; simpl; intros; default_simp.
+  induction e; simpl; intros; eauto.
+  destruct (x == y); subst; eauto.
+  rewrite IHe. auto.
+  rewrite IHe1. rewrite IHe2. auto.
 Qed.
 
 (*************************************************************************)
@@ -221,7 +196,9 @@ Qed.
 (*************************************************************************)
 
 (** The function [fv] calculates the set of free variables in an expression.
-    *)
+    This function returns a value of type `atoms` --- a finite set of
+    variable names.
+ *)
 
 (* Demo [fsetdec]
 
@@ -323,7 +300,8 @@ Proof.
     assumption.
 Qed.
 
-(* Now prove two other properties of substitution and fv *)
+(* Now prove the following properties of substitution and fv *)
+
 Lemma subst_exp_fresh_same :
 forall u e x,
   x `notin` fv_exp e ->
@@ -354,4 +332,107 @@ Proof.
     fsetdec.
     fsetdec.
     fsetdec.
+Qed.
+
+Lemma fv_exp_subst_exp_upper :
+forall e1 e2 x1,
+  fv_exp (subst_exp e2 x1 e1) [<=] fv_exp e2 `union` remove x1 (fv_exp e1).
+Proof.
+  (* SOLUTION *)
+  intros. induction e1; simpl in *.
+  - fsetdec.
+  - destruct (x == x1); simpl; fsetdec.
+  - rewrite IHe1. fsetdec.
+  - rewrite IHe1_1. rewrite IHe1_2.
+    fsetdec.
+Qed.
+
+(*************************************************************************)
+(** * Connection between small-step and bigstep semantics (Part I)       *)
+(*************************************************************************)
+
+
+
+(*
+Lemma bigstep_lc1 : forall x y, bigstep x y -> lc_exp x.
+Proof. induction 1; auto. Qed.
+Lemma bigstep_lc2 : forall x y, bigstep x y -> lc_exp y.
+Proof. induction 1; auto. Qed.
+*)
+
+Inductive multistep : exp -> exp -> Prop :=
+| ms_refl : forall e, lc_exp e -> multistep e e
+| ms_step : forall e1 e2 e3, eval e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+Hint Constructors multistep.
+
+(*
+Lemma ms_trans : forall e2 e1 e3,
+    multistep e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+Proof. induction 1; intros; eauto. Qed.
+
+Lemma app_cong1 : forall e1 e1' e2,
+    lc_exp e2 ->
+    multistep e1 e1' -> multistep (app e1 e2) (app e1' e2).
+Proof. induction 2.
+  - eapply ms_refl. eauto.
+  - eapply ms_step. eauto. eauto.
+Qed.
+
+Lemma app_cong2 : forall e1 e2 e2',
+    lc_exp e1 ->
+    is_value_of_exp e1 ->
+    multistep e2 e2' -> multistep (app e1 e2) (app e1 e2').
+Proof. induction 3.
+  - eapply ms_refl; eauto.
+  - eapply ms_step; eauto.
+Qed.
+
+Lemma bigstep_smallstep : forall e v, bigstep e v -> multistep e v.
+Proof.
+  induction 1.
+  apply (@ms_trans (app (abs T1 e1') e2)).
+  eapply app_cong1; eauto using bigstep_lc1, bigstep_lc2.
+  apply (@ms_trans (app (abs T1 e1') v1)).
+  eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
+  apply (@ms_trans (open_exp_wrt_exp e1' v1)).
+  eapply ms_step.
+  apply eval_beta;
+  eauto using bigstep_lc1, bigstep_lc2.
+  eapply ms_refl; eauto using bigstep_lc1.
+  auto.
+  eapply ms_refl; auto.
+Qed.
+*)
+(*
+Lemma smallstep_bigstep1 : forall e e', eval e e' -> forall v, bigstep e v -> bigstep e' v.
+Proof.
+  induction 1; intros.
+  - inversion H2; simpl in *; try contradiction. subst.
+    inversion H6. subst.
+    destruct v; simpl in *; try contradiction.
+    inversion H7; simpl in *; try contradiction; subst.
+    auto.
+  - inversion H1; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+  - inversion H2; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+Qed.
+*)
+Lemma smallstep_bigstep_aux : forall e e', eval e e' -> forall v, bigstep e' v -> bigstep e v.
+Proof.
+  induction 1; intros.
+  - eapply bs_app; eauto.
+    eapply bs_val; simpl; eauto.
+  - inversion H1; simpl in *; try contradiction; subst.
+    eapply bs_app; simpl; eauto.
+  - inversion H2; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+Qed.
+
+
+Lemma smallstep_bigstep : forall e v, multistep e v -> is_value_of_exp v -> bigstep e v.
+Proof.
+  induction 1; intros.
+  - destruct e; simpl in *; auto; try contradiction.
+  - eapply smallstep_bigstep_aux; eauto.
 Qed.

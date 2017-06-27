@@ -6,10 +6,8 @@
 
 Require Import Metalib.Metatheory.
 
-(** Next, we import the definitions of the simply-typed lambda calculus. *)
 Require Import Stlc.Definitions.
 
-(** And some auxiliary lemmas about these definitions. *)
 Require Import Stlc.Lemmas.
 
 Require Import Stlc.Lec1.
@@ -30,12 +28,7 @@ Require Import Stlc.Lec1.
     arguments is switched relative to the definition above.  For
     example, [(open e x)] can be read as "substitute the variable [x]
     for index [0] in [e]" and "open [e] with the variable [x]."
-    Recall that the coercions above let us write [x] in place of
-    [(var_f x)].
 *)
-
-
-(* Definition open e u := open_exp_wrt_exp_rec 0 u e. *)
 
 
 Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
@@ -64,9 +57,20 @@ Qed.
    reduces it to head form, and [simpl], which reduces the term the
    rest of the way.  Then finish up with [auto].  *)
 
+(* Now use this tactic to simplify the proof above. *)
 Ltac simpl_open :=
   unfold open_exp_wrt_exp; unfold open_exp_wrt_exp_rec; simpl;
   fold open_exp_wrt_exp_rec; fold open_exp_wrt_exp.
+
+Lemma demo_open_revised :
+  (app (abs typ_base (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
+  (app (abs typ_base (app (var_f Y) (var_b 0))) (var_f Y)).
+Proof.
+  (* SOLUTION *)
+  simpl_open.
+  reflexivity.
+Qed.
+
 
 (*************************************************************************)
 (** * Local closure *)
@@ -845,9 +849,9 @@ Qed.
     alone.
 *)
 
-Lemma eval_lc_exp1 : forall e1 e2, eval e1 e2 -> lc_exp e1.
+Lemma step_lc_exp1 : forall e1 e2, step e1 e2 -> lc_exp e1.
 Proof. induction 1; auto. Qed.
-Lemma eval_lc_exp2 : forall e1 e2, eval e1 e2 -> lc_exp e2.
+Lemma step_lc_exp2 : forall e1 e2, step e1 e2 -> lc_exp e2.
 Proof. induction 1; auto.
        - pick fresh x.
          rewrite (subst_exp_intro x).
@@ -875,7 +879,7 @@ Qed.
       - [typing_abs] case: Abstractions don't step.
 
       - [typing_app] case: By case analysis on how [e] steps. The
-        [eval_beta] case is interesting, since it follows by the
+        [step_beta] case is interesting, since it follows by the
         substitution lemma.  The others follow directly from the
         induction hypotheses.
 *)
@@ -888,7 +892,7 @@ Qed.
        - Use [inversion] to perform case analyses and to rule out
          impossible cases.
 
-       - In the [eval_beta] subcase of the [typing_app] case:
+       - In the [step_beta] subcase of the [typing_app] case:
 
           -- Use [inversion] on a typing judgement to obtain a
              hypothesis about when the body of the abstraction is
@@ -902,7 +906,7 @@ Qed.
 
 Lemma preservation : forall (E : env) e e' T,
   typing E e T ->
-  eval e e' ->
+  step e e' ->
   typing E e' T.
 Proof.
   intros E e e' T H.
@@ -915,7 +919,7 @@ Proof.
     inversion J.
   Case "typing_app".
     inversion J; subst; eauto.
-    SCase "eval_beta".
+    SCase "step_beta".
       inversion H; subst.
       pick fresh y.
       rewrite (subst_exp_intro y); auto.
@@ -968,7 +972,7 @@ Qed.
 
 Lemma progress : forall e T,
   typing nil e T ->
-  is_value_of_exp e \/ exists e', eval e e'.
+  is_value_of_exp e \/ exists e', step e e'.
 Proof.
   intros e T H.
 
@@ -992,16 +996,16 @@ Proof.
     simpl. auto.
   - Case "typing_app".
     right.
-    destruct IHtyping1 as [V1 | [e1' Eval1]]; auto.
+    destruct IHtyping1 as [V1 | [e1' Step1]]; auto.
       + SCase "e1 is a value".
-      destruct IHtyping2 as [V2 | [e2' Eval2]]; auto.
+      destruct IHtyping2 as [V2 | [e2' Step2]]; auto.
         SSCase "e2 is a value".
         destruct e1; inversion V1; subst. exists (open_exp_wrt_exp e1 e2); eauto using typing_to_lc_exp.
         SSCase "e2 is not a value".
           exists (app e1 e2'). eauto using typing_to_lc_exp.
       + SCase "e1 is not a value".
         exists (app e1' e2).
-        apply eval_app1.
+        apply step_app1.
           eapply typing_to_lc_exp; eauto.
           assumption.
 Qed.
@@ -1214,16 +1218,17 @@ Proof. induction 1; auto. Qed.
 
 Inductive multistep : exp -> exp -> Prop :=
 | ms_refl : forall e, lc_exp e -> multistep e e
-| ms_step : forall e1 e2 e3, eval e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+| ms_step : forall e1 e2 e3, step e1 e2 -> multistep e2 e3 -> multistep e1 e3.
 Hint Constructors multistep.
+
 Lemma ms_trans : forall e2 e1 e3,
     multistep e1 e2 -> multistep e2 e3 -> multistep e1 e3.
 Proof. induction 1; intros; eauto. Qed.
 
 Lemma multistep_lc1 : forall x y, multistep x y -> lc_exp x.
-Proof. intros. induction H; eauto using eval_lc_exp1. Qed.
+Proof. intros. induction H; eauto using step_lc_exp1. Qed.
 Lemma multistep_lc2 : forall x y, multistep x y -> lc_exp y.
-Proof. intros. induction H; eauto using eval_lc_exp2. Qed.
+Proof. intros. induction H; eauto using step_lc_exp2. Qed.
 
 Lemma app_cong1 : forall e1 e1' e2,
     lc_exp e2 ->
@@ -1251,14 +1256,14 @@ Proof.
   eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
   apply (@ms_trans (open_exp_wrt_exp e1' v1)).
   eapply ms_step.
-  apply eval_beta;
+  apply step_beta;
   eauto using bigstep_lc1, bigstep_lc2.
   eapply ms_refl; eauto using bigstep_lc1.
   auto.
   eapply ms_refl; auto.
 Qed.
-
-Lemma smallstep_bigstep1 : forall e e', eval e e' -> forall v, bigstep e v -> bigstep e' v.
+(*
+Lemma smallstep_bigstep1 : forall e e', step e e' -> forall v, bigstep e v -> bigstep e' v.
 Proof.
   induction 1; intros.
   - inversion H2; simpl in *; try contradiction. subst.
@@ -1271,8 +1276,8 @@ Proof.
   - inversion H2; simpl in *; try contradiction; subst.
     eapply bs_app; eauto.
 Qed.
-
-Lemma smallstep_bigstep2 : forall e e', eval e e' -> forall v, bigstep e' v -> bigstep e v.
+*)
+Lemma smallstep_bigstep2 : forall e e', step e e' -> forall v, bigstep e' v -> bigstep e v.
 Proof.
   induction 1; intros.
   - eapply bs_app; eauto.

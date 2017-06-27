@@ -4,10 +4,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% METAVARIABLES
 
-metavar atom, y ::=
-  {{ coq var }}{{ coq-equality }}
-
-metavar var, x ::=
+metavar var, x, y ::=
   {{ repr-locally-nameless }}
   {{ com variables }}
   {{ lex alphanum }}
@@ -17,7 +14,7 @@ indexvar index, i ::=
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% GRAMMAR
+%% GRAMMAR (LNgen portion)
 
 grammar
 
@@ -29,17 +26,13 @@ exp, e :: ''     ::= {{ com expressions }}
   | x              ::   :: var
   | \ x : T . e    ::   :: abs
     (+ bind x in e +)
+	 {{ tex [[\]][[x]]\!:\![[T]].[[e]] }}
   | e1 e2          ::   :: app
   | e1 [ x ~> e2 ] :: M :: subst
      {{ coq (open_exp_wrt_exp [[x e1]][[e2]]) }}
-  | ( e )          :: S :: paren
+  | ( e )          :: M :: paren
      {{ coq ([[e]]) }}
 
-
-
-terminals :: ''  ::=
-  | |-                ::   :: entails    {{ tex \vdash }}
-  | fv                ::   :: fv         {{ tex \mathsf{fv}\! }}
 
 substitutions
   single exp x :: subst
@@ -50,24 +43,30 @@ freevars
 parsing
   typ_arrow right typ_arrow
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% GRAMMAR  (non LNgen portion)
+
 grammar
 
-nom, a :: 'n_'   ::= {{ com named expressions }}
-  | y              ::   :: var
-  | \ y : T . a    ::   :: abs
-    (+ bind y in a +)
-  | a1 a2          ::   :: app
-  | ( a )          :: S :: paren
-     {{ coq ([[a]]) }}
 
-
-ctx, G :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
+ctx, G {{ tex \Gamma }} :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
   | empty          ::   :: Empty {{ coq nil }}
   | G , x : T      ::   :: Cons  {{ coq (([[x]]~[[T]])++[[G]]) }}
 
 value, v :: 'v_' ::= {{ com values }}
   | \ x : T . e   ::        :: abs
     (+ bind x in e +)
+	 {{ tex [[\]][[x]]\!:\![[T]].[[e]] }}
+
+terminals :: 'terminals_' ::=
+    | \                   ::   :: lambda     {{ tex \lambda }}
+    | -->                 ::   :: red        {{ tex \longrightarrow }}
+    | ==>                 ::   :: bigred     {{ tex \Longrightarrow }}
+    |  ->                 ::   :: arrow      {{ tex \rightarrow }}
+    | |-                  ::   :: turnstile  {{ tex \vdash }}
+    | in                  ::   :: in         {{ tex \in }}
+    | fv                  ::   :: fv         {{ tex \mathsf{fv}\! }}
+    | ~>                  ::   :: leadsto    {{ tex \leadsto }}
 
 
 formula :: 'formula_' ::=
@@ -80,16 +79,10 @@ formula :: 'formula_' ::=
     {{ coq [[x]] \notin fv[[e]] }}
   | x notin dom G            ::   :: notInGx
     {{ coq ~ AtomSetImpl.In [[x]] (dom [[G]]) }}
-  | formula1 .. formulai     ::   :: dots
+
 subrules
 
 v <:: e
-
-substitutions
-  single nom y :: subst
-
-freevars
-  nom y        :: fv
 
 
 embed
@@ -120,7 +113,7 @@ G |- \x:T1. e : T1 -> T2
 
 G |- e1 : T1 -> T2
 G |- e2 : T1
------------------ :: app
+------------------ :: app
 G |- e1 e2 : T2
 
 defns
@@ -128,7 +121,7 @@ defns
 JEval :: '' ::=
 
 defn
-e --> e' ::   :: eval :: 'eval_'
+e --> e' ::   :: step :: 'step_'
 by
 
 ------------------------------- :: beta
