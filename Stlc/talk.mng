@@ -1,0 +1,69 @@
+\documentclass{beamer}
+
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{supertabular}
+
+\usepackage{mathpartir}
+%\usepackage{ottalt}
+
+\input{stlc-rules}
+
+
+\title{Specifying higher-order languages}
+\author{Stephanie Weirich}
+\institute{University of Pennsylvania}
+\date{2017}
+
+
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+\frametitle{Syntax of STLC}
+
+\ottgrammar{}
+
+%\ottdefntyping{}
+
+%\ottdefnstep{}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Typing rules for STLC}
+
+\ottdefntyping{}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Small-step rules for STLC}
+
+\ottdefnstep{}
+
+$[[\x:T.x]]$
+
+
+\begin{lemma}[Deterministic step]
+If $[[e --> e1]]$ and $[[e --> e2]]$ then $[[e1]] = [[e2]]$.
+\end{lemma}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Properties of STLC}
+
+
+
+\end{frame}
+
+
+
+\end{document}
