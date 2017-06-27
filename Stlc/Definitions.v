@@ -214,7 +214,7 @@ Inductive typing : env -> exp -> typ -> Prop :=
 
 
 (*************************************************************************)
-(** * Values and Evaluation *)
+(** * Values and Small-step Evaluation *)
 (*************************************************************************)
 
 (** In order to state the preservation lemma, we need to define values and the
@@ -231,7 +231,6 @@ Definition is_value_of_exp (e_5:exp) : Prop :=
   | (abs T e) => (True)
   | (app e1 e2) => False
 end.
-
 
 
 (* defns JEval *)
@@ -252,3 +251,25 @@ Inductive eval : exp -> exp -> Prop :=    (* defn eval *)
      eval (app v e2) (app v e2').
 
 Hint Constructors typing eval lc_exp.
+
+(*************************************************************************)
+(** * Big-step Evaluation *)
+(*************************************************************************)
+
+Inductive bigstep : exp -> exp -> Prop :=    (* defn bigstep *)
+ | bs_app : forall (e1 v2:exp) (T1:typ) (e1' e2 v1:exp),
+     is_value_of_exp v1 ->
+     bigstep e1 (abs T1 e1') ->
+     bigstep e2 v1 ->
+     bigstep  (open_exp_wrt_exp  e1' v1 )  v2 ->
+     bigstep (app e1 e2) v2
+| bs_val : forall (v:exp),
+     is_value_of_exp v ->
+     lc_exp v ->
+     bigstep v v.
+Hint Constructors bigstep.
+
+(*************************************************************)
+
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Definition open e u := open_exp_wrt_exp_rec 0 u e.

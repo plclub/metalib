@@ -14,7 +14,6 @@ Require Import Stlc.Lemmas.
 
 Require Import Stlc.Lec1.
 
-
 (*************************************************************************)
 (** * Opening *)
 (*************************************************************************)
@@ -36,7 +35,7 @@ Require Import Stlc.Lec1.
 *)
 
 
-Definition open e u := open_exp_wrt_exp_rec 0 u e.
+(* Definition open e u := open_exp_wrt_exp_rec 0 u e. *)
 
 
 Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
@@ -1204,6 +1203,96 @@ Proof.
 Qed.
 
 (*************************************************************)
+
+
+
+
+Lemma bigstep_lc1 : forall x y, bigstep x y -> lc_exp x.
+Proof. induction 1; auto. Qed.
+Lemma bigstep_lc2 : forall x y, bigstep x y -> lc_exp y.
+Proof. induction 1; auto. Qed.
+
+Inductive multistep : exp -> exp -> Prop :=
+| ms_refl : forall e, lc_exp e -> multistep e e
+| ms_step : forall e1 e2 e3, eval e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+Hint Constructors multistep.
+Lemma ms_trans : forall e2 e1 e3,
+    multistep e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+Proof. induction 1; intros; eauto. Qed.
+
+Lemma multistep_lc1 : forall x y, multistep x y -> lc_exp x.
+Proof. intros. induction H; eauto using eval_lc_exp1. Qed.
+Lemma multistep_lc2 : forall x y, multistep x y -> lc_exp y.
+Proof. intros. induction H; eauto using eval_lc_exp2. Qed.
+
+Lemma app_cong1 : forall e1 e1' e2,
+    lc_exp e2 ->
+    multistep e1 e1' -> multistep (app e1 e2) (app e1' e2).
+Proof. induction 2.
+  - eapply ms_refl. eauto.
+  - eapply ms_step. eauto. eauto.
+Qed.
+
+Lemma app_cong2 : forall e1 e2 e2',
+    lc_exp e1 ->
+    is_value_of_exp e1 ->
+    multistep e2 e2' -> multistep (app e1 e2) (app e1 e2').
+Proof. induction 3.
+  - eapply ms_refl; eauto.
+  - eapply ms_step; eauto.
+Qed.
+
+Lemma bigstep_smallstep : forall e v, bigstep e v -> multistep e v.
+Proof.
+  induction 1.
+  apply (@ms_trans (app (abs T1 e1') e2)).
+  eapply app_cong1; eauto using bigstep_lc1, bigstep_lc2.
+  apply (@ms_trans (app (abs T1 e1') v1)).
+  eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
+  apply (@ms_trans (open_exp_wrt_exp e1' v1)).
+  eapply ms_step.
+  apply eval_beta;
+  eauto using bigstep_lc1, bigstep_lc2.
+  eapply ms_refl; eauto using bigstep_lc1.
+  auto.
+  eapply ms_refl; auto.
+Qed.
+
+Lemma smallstep_bigstep1 : forall e e', eval e e' -> forall v, bigstep e v -> bigstep e' v.
+Proof.
+  induction 1; intros.
+  - inversion H2; simpl in *; try contradiction. subst.
+    inversion H6. subst.
+    destruct v; simpl in *; try contradiction.
+    inversion H7; simpl in *; try contradiction; subst.
+    auto.
+  - inversion H1; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+  - inversion H2; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+Qed.
+
+Lemma smallstep_bigstep2 : forall e e', eval e e' -> forall v, bigstep e' v -> bigstep e v.
+Proof.
+  induction 1; intros.
+  - eapply bs_app; eauto.
+    eapply bs_val; simpl; eauto.
+  - inversion H1; simpl in *; try contradiction; subst.
+    eapply bs_app; simpl; eauto.
+  - inversion H2; simpl in *; try contradiction; subst.
+    eapply bs_app; eauto.
+Qed.
+
+
+Lemma smallstep_bigstep : forall e v, multistep e v -> is_value_of_exp v -> bigstep e v.
+Proof.
+  induction 1; intros.
+  - destruct e; simpl in *; auto; try contradiction.
+  - eapply smallstep_bigstep2; eauto.
+Qed.
+
+
+(***********************************************************)
 
 (* We also want a property that states that the free variables of well-typed
    terms are contained within the domain of their typing environments. *)

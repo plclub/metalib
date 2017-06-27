@@ -12,6 +12,7 @@ Inductive res (a : Set) : Set :=
   | timeout : res a
   | stuck   : res a.
 
+
 Fixpoint n_bigstep (n:nat) (e:exp) : res exp :=
   match n with
   | 0 => @timeout exp
@@ -52,13 +53,15 @@ Proof.
     pose (Ih2 := IHn e2 T1 H4). clearbody Ih2.
 
     destruct (n_bigstep n e1); try contradiction;
-    destruct Ih1 as [v1 [EV1 [Tv1 vv1]]]; try solve [intro h; inversion h]; inversion EV1.
+    destruct Ih1 as [v1 [EV1 [Tv1 vv1]]];
+       try solve [intro h; inversion h]; inversion EV1.
 
     (* By canonical forms, know that v1 must be an abstraction. *)
     destruct v1; simpl in vv1; try contradiction; clear vv1. subst e.
 
     destruct (n_bigstep n e2); try contradiction;
-    destruct Ih2 as [v2 [EV2 [Tv2 vv2]]]; try solve [intro h; inversion h]; inversion EV2. subst.
+    destruct Ih2 as [v2 [EV2 [Tv2 vv2]]];
+        try solve [intro h; inversion h]; inversion EV2. subst.
 
     eapply IHn; eauto.
 
@@ -69,6 +72,7 @@ Proof.
     eapply typing_subst_simple; eauto.
     fsetdec.
 Qed.
+
 
 
 (*************************************************************)
