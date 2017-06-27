@@ -7,14 +7,13 @@
 Require Import Metalib.Metatheory.
 
 (** Next, we import the definitions of the simply-typed lambda calculus. *)
-Require Import Definitions.
+Require Import Stlc.Definitions.
 
 (** And some auxiliary lemmas about these definitions. *)
-Require Import Lemmas.
+Require Import Stlc.Lemmas.
 
+Require Import Stlc.Lec1.
 
-Parameter X : atom.
-Parameter Y : atom.
 
 (*************************************************************************)
 (** * Opening *)
@@ -364,6 +363,55 @@ Proof.
   auto.
 Qed.
 
+(*************************************************************************)
+(** * Tactic support *)
+(*************************************************************************)
+
+(** When picking a fresh var or applying a rule that uses cofinite
+    quantification, choosing a set of vars to be fresh for can be
+    tedious.  In practice, it is simpler to use a tactic to choose the
+    set to be as large as possible.
+
+    The tactic [gather_atoms] is used to collect together all the
+    atoms in the context.  It relies on an auxiliary tactic,
+    [gather_atoms_with] (from MetatheoryAtom), which maps a function
+    that returns a finite set of atoms over all hypotheses with the
+    appropriate type.
+*)
+
+Ltac gather_atoms ::=
+  let A := gather_atoms_with (fun x : atoms => x) in
+  let B := gather_atoms_with (fun x : atom => singleton x) in
+  let C := gather_atoms_with (fun x : list (var * typ) => dom x) in
+  let D := gather_atoms_with (fun x : exp => fv_exp x) in
+  constr:(A `union` B `union` C `union` D).
+
+(** A number of other, useful tactics are defined by the Metatheory
+    library, and each depends on [gather_atoms].  By redefining
+    [gather_atoms], denoted by the [::=] in its definition below, we
+    automatically update these tactics so that they use the proper
+    notion of "all atoms in the context."
+
+    For example, the tactic [(pick fresh x)] chooses an atom fresh for
+    "everything" in the context.  It is the same as [(pick fresh x for
+    L)], except where [L] has been computed by [gather_atoms].
+
+*)
+
+
+(** *** Example
+
+    The tactic [(pick fresh x and apply H)] applies a rule [H] that is
+    defined using cofinite quantification.  It automatically
+    instantiates the finite set of atoms to exclude using
+    [gather_atoms].
+
+    Below, we reprove [subst_lc_c] using [(pick fresh and apply)].
+    Step through the proof below to see how [(pick fresh and apply)]
+    works.
+*)
+
+
 
 (*************************************************************************)
 (** * Typing relation *)
@@ -615,54 +663,6 @@ Proof.
 Qed.
 
 
-
-(*************************************************************************)
-(** * Tactic support *)
-(*************************************************************************)
-
-(** When picking a fresh var or applying a rule that uses cofinite
-    quantification, choosing a set of vars to be fresh for can be
-    tedious.  In practice, it is simpler to use a tactic to choose the
-    set to be as large as possible.
-
-    The tactic [gather_atoms] is used to collect together all the
-    atoms in the context.  It relies on an auxiliary tactic,
-    [gather_atoms_with] (from MetatheoryAtom), which maps a function
-    that returns a finite set of atoms over all hypotheses with the
-    appropriate type.
-*)
-
-Ltac gather_atoms ::=
-  let A := gather_atoms_with (fun x : atoms => x) in
-  let B := gather_atoms_with (fun x : atom => singleton x) in
-  let C := gather_atoms_with (fun x : list (var * typ) => dom x) in
-  let D := gather_atoms_with (fun x : exp => fv_exp x) in
-  constr:(A `union` B `union` C `union` D).
-
-(** A number of other, useful tactics are defined by the Metatheory
-    library, and each depends on [gather_atoms].  By redefining
-    [gather_atoms], denoted by the [::=] in its definition below, we
-    automatically update these tactics so that they use the proper
-    notion of "all atoms in the context."
-
-    For example, the tactic [(pick fresh x)] chooses an atom fresh for
-    "everything" in the context.  It is the same as [(pick fresh x for
-    L)], except where [L] has been computed by [gather_atoms].
-
-*)
-
-
-(** *** Example
-
-    The tactic [(pick fresh x and apply H)] applies a rule [H] that is
-    defined using cofinite quantification.  It automatically
-    instantiates the finite set of atoms to exclude using
-    [gather_atoms].
-
-    Below, we reprove [subst_lc_c] using [(pick fresh and apply)].
-    Step through the proof below to see how [(pick fresh and apply)]
-    works.
-*)
 
 
 (*************************************************************************)

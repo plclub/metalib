@@ -324,15 +324,15 @@ Fixpoint nom_bigstep (n:nat) (e:n_exp) (rho: nom_env) : res nom_val :=
     | n_app e1 e2 =>
       match nom_bigstep m e1 rho with
       | val _ (nom_closure x T rho' e1') =>
-         match AtomSetProperties.In_dec x (dom_rho rho') with
+(*         match AtomSetProperties.In_dec x (dom_rho rho') with
         | left _ => stuck _
-        | right _ =>
+        | right _ => *)
             match nom_bigstep m e2 rho with
             | val _ v1 =>
               nom_bigstep m e1' (nom_cons x v1 rho')
             | r => r
             end
-         end
+(*         end *)
       | r       => r
       end
     | n_abs x T e   => val _ (nom_closure x T rho e)
@@ -368,9 +368,9 @@ Proof.
     assert (C: closed_val n0). eapply IHn; eauto. fsetdec.
     destruct n0 as [x T rho' e1'].
     inversion C.
-    destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H].
+(*     destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H]. *)
     destruct r2; try solve [inversion H].
-    assert (closed_val n1). eapply IHn; eauto. fsetdec.
+    assert (closed_val n0). eapply IHn; eauto. fsetdec.
     eauto.
 Qed.
 
@@ -447,11 +447,11 @@ Proof.
     destruct n0 as [x T rho' e1'].
     inversion H2.
 
-    destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H].
-
+(*    destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H].
+*)
 
     destruct r2; try solve [inversion H].
-    assert (closed_val n1).
+    assert (closed_val n0).
     eapply nom_closed; eauto. fsetdec.
 
     apply IHn in Heqr1; auto; try fsetdec.
