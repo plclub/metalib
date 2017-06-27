@@ -4,7 +4,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% METAVARIABLES
 
-metavar var, x, y ::=
+metavar atom, y ::=
+  {{ coq var }}{{ coq-equality }}
+
+metavar var, x ::=
   {{ repr-locally-nameless }}
   {{ com variables }}
   {{ lex alphanum }}
@@ -32,6 +35,8 @@ exp, e :: ''     ::= {{ com expressions }}
   | ( e )          :: S :: paren
      {{ coq ([[e]]) }}
 
+
+
 terminals :: ''  ::=
   | |-                ::   :: entails    {{ tex \vdash }}
   | fv                ::   :: fv         {{ tex \mathsf{fv}\! }}
@@ -47,6 +52,15 @@ parsing
 
 grammar
 
+nom, a :: 'n_'   ::= {{ com named expressions }}
+  | y              ::   :: var
+  | \ y : T . a    ::   :: abs
+    (+ bind y in a +)
+  | a1 a2          ::   :: app
+  | ( a )          :: S :: paren
+     {{ coq ([[a]]) }}
+
+
 ctx, G :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
   | empty          ::   :: Empty {{ coq nil }}
   | G , x : T      ::   :: Cons  {{ coq (([[x]]~[[T]])++[[G]]) }}
@@ -54,17 +68,6 @@ ctx, G :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
 value, v :: 'v_' ::= {{ com values }}
   | \ x : T . e   ::        :: abs
     (+ bind x in e +)
-
-rt_val, cv :: ''     ::=
-  | closure x T rho  e  ::   :: closure
-  (+ bind x in e +)
-  | ( cv )  :: M  :: rt_val_paren {{ coq ([[cv]]) }}
-
-rt_env, rho :: ''     ::= {{ coq list ( atom * rt_val) }}
-  | ( x1 , cv1 ) .. ( xi , cvi )  ::   :: rtlist
-  | nil           ::  M  :: rtnil {{ coq nil }}
-  | rho , x ~> cv  ::  M  :: rtcons {{ coq ([[x]]~[[cv]]++[[rho]]) }}
-  | ( rho ) :: M :: rt_env_paren {{ coq ([[rho]]) }}
 
 
 formula :: 'formula_' ::=
@@ -81,6 +84,13 @@ formula :: 'formula_' ::=
 subrules
 
 v <:: e
+
+substitutions
+  single nom y :: subst
+
+freevars
+  nom y        :: fv
+
 
 embed
 {{ coq
@@ -148,28 +158,3 @@ e1 e1 ==> v2
 
 ----------------- :: val
 v ==> v
-
-defns
-
-Jenv :: '' ::=
-
-defn
-close rho e rt_val :: :: close :: 'close_'
-by
-
------------------------------------- :: abs
-close rho (\x:T.e) (closure x T rho e)
-
-defn
-env_bigstep rho e cv ::  :: env_bigstep :: 'env_bs_'
-by
-
-close rho v cv
------------------------- :: val
-env_bigstep rho v cv
-
-env_bigstep rho e1 (closure x T rho' e1')
-env_bigstep rho e2 cv'
-env_bigstep (rho', x ~> cv') e1' cv
--------------------------------------- :: app
-env_bigstep rho e1 e2 cv

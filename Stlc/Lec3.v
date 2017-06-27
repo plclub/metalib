@@ -101,19 +101,90 @@ Hint Constructors bigstep.
 (*   Connection to nominal representation of terms           *)
 (*************************************************************)
 
-Inductive n_exp : Set :=  (*r expressions *)
+(* A named representation of STLC terms.
+   No debruijn indices, and binders include the names of free variables. *)
+
+Inductive n_exp : Set :=
  | n_var (x:var)
  | n_abs (x:var) (T:typ) (e:n_exp)
  | n_app (e1:n_exp) (e2:n_exp).
 
-Fixpoint nom_fv (e : n_exp) : vars :=
-  match e with
-  | n_var x => {{ x }}
-  | n_abs x T e => AtomSetImpl.remove x (nom_fv e)
-  | n_app e1 e2 => nom_fv e1 \u nom_fv e2
+Parameter X : var.
+Parameter Y : var.
+Parameter neqXY : X <> Y.
+
+Definition example_X : n_exp := n_abs X typ_base (n_var X).
+Definition example_Y : n_exp := n_abs Y typ_base (n_var Y).
+
+Lemma names_matter : example_X <> example_Y.
+Proof.
+  unfold example_X, example_Y. intro H. inversion H. apply neqXY. auto.
+Qed.
+
+(* --- an environment-based interpreter for named terms ------- *)
+
+(*
+   The result of this interpreter is a "closure" --- a lambda expression
+   paired with a substitution for all of the free variables in the term.
+   We call such substitutions "environments".
+
+*)
+
+Inductive nom_val : Set :=
+  | nom_closure : atom -> typ -> nom_env -> n_exp -> nom_val
+
+with nom_env : Set :=
+  | nom_nil  : nom_env
+  | nom_cons : atom -> nom_val -> nom_env -> nom_env.
+
+Fixpoint rho_lookup x rho : option nom_val :=
+  match rho with
+  | nom_nil => None
+  | nom_cons y v rho' =>  if (x == y) then Some v else rho_lookup x rho'
   end.
 
-(* --- translate back to LN rep --- *)
+Fixpoint nom_interp (n:nat) (e:n_exp) (rho: nom_env) : res nom_val :=
+  match n with
+  | 0 => timeout _
+  | S m =>
+    match e with
+    | n_var x =>  match (rho_lookup x rho) with
+                | Some v => val _ v
+                | None   => stuck _
+                end
+    | n_app e1 e2 =>
+      match nom_interp m e1 rho with
+      | val _ (nom_closure x T rho' e1') =>
+            match nom_interp m e2 rho with
+            | val _ v1 =>
+              nom_interp m e1' (nom_cons x v1 rho')
+            | r => r
+            end
+      | r       => r
+      end
+    | n_abs x T e   => val _ (nom_closure x T rho e)
+    end
+  end.
+
+(* --- translation from nominal terms and values to LN terms --- *)
+(*
+    Our goal is to prove the correctness of this interpreter. In otherwords,
+    we want to show that if it produces a value, then we can translate to an
+    evaluation of LN terms.
+
+    The property that we ultimately want to prove looks something like this:
+
+<<
+   Lemma nom_soundness0 : forall n e v,
+      val _ v = nom_interp n e nom_nil  ->
+      bigstep (nom_to_exp e) (nom_val_to_exp v).
+>>
+
+    where we straightforwardly translate nominal terms to LN terms.
+    (Note that we cannot write the function in the other direction --- there
+    are many equally valid names that we can choose for the bound variable.)
+*)
+
 Fixpoint nom_to_exp (ne : n_exp) : exp :=
   match ne with
   | n_var x => var_f x
@@ -121,13 +192,107 @@ Fixpoint nom_to_exp (ne : n_exp) : exp :=
   | n_abs x T e1 => abs T (close_exp_wrt_exp x (nom_to_exp e1))
 end.
 
-Lemma nom_to_exp_lc : forall ne, lc_exp (nom_to_exp ne).
+(* We must define the translation of values simultaneously with a substitution
+   function for environments. This function substitutes all of the mappings in
+   the environment in a LN expression, using the LN substitution function.
+   This is good because we don't need to define capture-avoiding substitution for
+   nominal terms.
+ *)
+
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+
+Fixpoint nom_val_to_exp (cv:nom_val) : exp :=
+  match cv with
+  | nom_closure x T rho e =>
+    nom_envsubst rho (nom_to_exp (n_abs x T e))
+  end
+with nom_envsubst (ne:nom_env) : exp -> exp :=
+  match ne with
+  | nom_nil => fun e => e
+  | nom_cons x v rho => fun e => nom_envsubst rho ([ x ~> nom_val_to_exp v] e)
+  end.
+
+
+
+(*
+    However, to prove the soundness lemma, we will need to strengthen it so
+    that it says something about non-empty environments.
+
+
+<<
+   Lemma nom_soundness1 : forall n rho e v,
+      val _ v = nom_interp n e rho  ->
+      .... ->
+      bigstep (nom_envsubst rho (nom_to_exp e)) (nom_val_to_exp v).
+>>
+
+   However, this lemma will not be true for all environments and nominal terms,
+   we need to make sure that the domain of the environment includes definitions
+   for all of the free variables in e, and that the range of the environment
+   includes only *closed* nominal values.
+
+*)
+
+Fixpoint dom_rho (rho :nom_env) :=
+  match rho with
+  | nom_nil => {}
+  | nom_cons x v rho => {{x}} \u dom_rho rho
+  end.
+
+Inductive closed_val : nom_val -> Prop :=
+  | closed_closure : forall x T rho e,
+      closed_env rho ->
+      fv_exp (nom_to_exp e) [<=] {{x}} \u dom_rho rho ->
+      closed_val (nom_closure x T rho e)
+with closed_env : nom_env -> Prop :=
+     | closed_nil : closed_env nom_nil
+     | closed_cons : forall x v rho,
+         closed_val v -> closed_env rho -> closed_env (nom_cons x v rho).
+Hint Constructors closed_env closed_val.
+
+
+Scheme closed_val_ind' := Induction for closed_val Sort Prop
+ with  closed_env_ind' := Induction for closed_env Sort Prop.
+Combined Scheme closed_nom from closed_val_ind', closed_env_ind'.
+
+Lemma fv_closed_mutual :
+  (forall v, closed_val v -> fv_exp (nom_val_to_exp v) [=] {}) /\
+  (forall rho, closed_env rho -> forall e, fv_exp e [<=] dom_rho rho ->
+                                fv_exp (nom_envsubst rho e) [=] {}).
 Proof.
-  induction ne; simpl; auto.
-  eapply lc_abs_exists with (x := x).
-  rewrite open_exp_wrt_exp_close_exp_wrt_exp.
-  auto.
+  eapply closed_nom; intros.
+  + simpl. rewrite H. fsetdec.
+    simpl. autorewrite with lngen.
+    fsetdec.
+  + simpl in *. fsetdec.
+  + simpl in *.
+    rewrite H0. fsetdec.
+    rewrite fv_exp_subst_exp_upper.
+    rewrite H.
+    fsetdec.
 Qed.
+
+Lemma fv_closed :
+  (forall v, closed_val v -> fv_exp (nom_val_to_exp v) [=] {}).
+Proof.
+  eapply fv_closed_mutual.
+Qed.
+
+Lemma fv_closed_env :
+  (forall rho, closed_env rho -> forall e, fv_exp e [<=] dom_rho rho ->
+                                fv_exp (nom_envsubst rho e) [=] {}).
+Proof.
+  eapply fv_closed_mutual.
+Qed.
+
+
+(*
+Fixpoint nom_fv (e : n_exp) : vars :=
+  match e with
+  | n_var x => {{ x }}
+  | n_abs x T e => AtomSetImpl.remove x (nom_fv e)
+  | n_app e1 e2 => nom_fv e1 \u nom_fv e2
+  end.
 
 Lemma nom_to_exp_fv : forall ne, nom_fv ne [=] fv_exp (nom_to_exp ne).
 Proof.
@@ -140,85 +305,25 @@ Proof.
     fsetdec.
 Qed.
 
-(* ----- result of interpretation -------------- *)
-Inductive nom_val : Set :=
-  | nom_closure : atom -> typ -> nom_env -> n_exp -> nom_val
-with nom_env : Set :=
-  | nom_nil : nom_env
-  | nom_cons : atom -> nom_val -> nom_env -> nom_env.
+*)
+
+Lemma nom_to_exp_lc : forall ne, lc_exp (nom_to_exp ne).
+Proof.
+  induction ne; simpl; auto.
+  eapply lc_abs_exists with (x := x).
+  rewrite open_exp_wrt_exp_close_exp_wrt_exp.
+  auto.
+Qed.
 
 Scheme nom_val_ind' := Induction for nom_val Sort Prop
  with  nom_env_ind' := Induction for nom_env Sort Prop.
 Combined Scheme nom_mutual from nom_val_ind', nom_env_ind'.
 
-Fixpoint nom_unload (cv:nom_val) : exp :=
-  match cv with
-  | nom_closure x T rho e =>
-    nom_envsubst rho (nom_to_exp (n_abs x T e))
-  end
-with
-nom_envsubst (ne:nom_env) : exp -> exp :=
-  match ne with
-  | nom_nil => fun e => e
-  | nom_cons x v rho => fun e => nom_envsubst rho (subst_exp (nom_unload v) x e)
-  end.
 
-Fixpoint dom_rho (rho :nom_env) :=
-  match rho with
-  | nom_nil => {}
-  | nom_cons x v rho => {{x}} \u dom_rho rho
-  end.
-
-
-Inductive closed_val : nom_val -> Prop :=
-  | closed_closure : forall x T rho e,
-      closed_env rho ->
-      nom_fv e [<=] {{x}} \u dom_rho rho ->
-      closed_val (nom_closure x T rho e)
-with closed_env : nom_env -> Prop :=
-     | closed_nil : closed_env nom_nil
-     | closed_cons : forall x v rho,
-         closed_val v -> closed_env rho -> closed_env (nom_cons x v rho).
-Hint Constructors closed_env closed_val.
-
-Scheme closed_val_ind' := Induction for closed_val Sort Prop
- with  closed_env_ind' := Induction for closed_env Sort Prop.
-Combined Scheme closed_nom from closed_val_ind', closed_env_ind'.
-
-Lemma fv_closed_mutual :
-  (forall v, closed_val v -> fv_exp (nom_unload v) [=] {}) /\
-  (forall rho, closed_env rho -> forall e, fv_exp e [<=] dom_rho rho ->
-                                fv_exp (nom_envsubst rho e) [=] {}).
-Proof.
-  eapply closed_nom; intros.
-  + simpl. rewrite H. fsetdec.
-    simpl. autorewrite with lngen.
-    rewrite nom_to_exp_fv in s.
-    fsetdec.
-  + simpl in *. fsetdec.
-  + simpl in *.
-    rewrite H0. fsetdec.
-    rewrite fv_exp_subst_exp_upper.
-    rewrite H.
-    fsetdec.
-Qed.
-
-Lemma fv_closed :
-  (forall v, closed_val v -> fv_exp (nom_unload v) [=] {}).
-Proof.
-  eapply fv_closed_mutual.
-Qed.
-
-Lemma fv_closed_env :
-  (forall rho, closed_env rho -> forall e, fv_exp e [<=] dom_rho rho ->
-                                fv_exp (nom_envsubst rho e) [=] {}).
-Proof.
-  eapply fv_closed_mutual.
-Qed.
 
 Lemma unload_fresh : forall rho v,
     closed_val v ->
-    nom_envsubst rho (nom_unload v) = nom_unload v.
+    nom_envsubst rho (nom_val_to_exp v) = nom_val_to_exp v.
 Proof.
   induction rho. simpl. auto.
   intros. simpl.
@@ -226,15 +331,6 @@ Proof.
   rewrite fv_closed; auto.
 Qed.
 
-Fixpoint rho_lookup x rho :=
-  match rho with
-  | nom_nil => None
-  | nom_cons y v rho' =>
-    if (x == y) then
-      Some v
-    else
-      rho_lookup x rho'
-  end.
 
 Lemma rho_lookup_closed_val : forall x rho v,
     closed_env rho ->
@@ -252,7 +348,7 @@ Qed.
 Lemma nom_envsubst_var : forall x rho v,
     closed_env rho ->
     Some v = rho_lookup x rho ->
-    nom_envsubst rho (var_f x) = nom_unload v.
+    nom_envsubst rho (var_f x) = nom_val_to_exp v.
 Proof.
   induction rho.
   - intros. simpl in *.
@@ -286,14 +382,14 @@ Proof.
     auto.
 Qed.
 
-Lemma nom_unload_is_value : forall v, is_value_of_exp (nom_unload v).
+Lemma nom_val_to_exp_is_value : forall v, is_value_of_exp (nom_val_to_exp v).
 Proof.
   destruct v. simpl. rewrite nom_envsubst_abs.
   simpl. auto.
 Qed.
 
-Lemma nom_unload_lc_mutual :
-  (forall v, lc_exp (nom_unload v)) /\
+Lemma nom_val_to_exp_lc_mutual :
+  (forall v, lc_exp (nom_val_to_exp v)) /\
   (forall rho, forall e, lc_exp e -> lc_exp (nom_envsubst rho e)).
 Proof.
   eapply nom_mutual.
@@ -309,42 +405,15 @@ Proof.
 Qed.
 
 Lemma nom_envsubst_lc : (forall rho, forall e, lc_exp e -> lc_exp (nom_envsubst rho e)).
-  eapply nom_unload_lc_mutual.
+  eapply nom_val_to_exp_lc_mutual.
 Qed.
-
-Fixpoint nom_bigstep (n:nat) (e:n_exp) (rho: nom_env) : res nom_val :=
-  match n with
-  | 0 => timeout _
-  | S m =>
-    match e with
-    | n_var x =>  match (rho_lookup x rho) with
-                | Some v => val _ v
-                | None   => stuck _
-                end
-    | n_app e1 e2 =>
-      match nom_bigstep m e1 rho with
-      | val _ (nom_closure x T rho' e1') =>
-(*         match AtomSetProperties.In_dec x (dom_rho rho') with
-        | left _ => stuck _
-        | right _ => *)
-            match nom_bigstep m e2 rho with
-            | val _ v1 =>
-              nom_bigstep m e1' (nom_cons x v1 rho')
-            | r => r
-            end
-(*         end *)
-      | r       => r
-      end
-    | n_abs x T e   => val _ (nom_closure x T rho e)
-    end
-  end.
 
 
 
 Lemma nom_closed : forall n rho e v,
-    val _ v = nom_bigstep n e rho ->
+    val _ v = nom_interp n e rho ->
     closed_env rho ->
-    nom_fv e [<=] dom_rho rho ->
+    fv_exp (nom_to_exp e) [<=] dom_rho rho ->
     closed_val v.
 Proof.
   induction n.
@@ -357,32 +426,32 @@ Proof.
   - Case "abs".
     inversion H.
     econstructor; eauto.
+    autorewrite with lngen in H1.
     rewrite <- H1.
     rewrite <-  AtomSetProperties.add_union_singleton.
     eapply FSetDecideTestCases.test_Subset_add_remove.
   - Case "app".
-    remember (nom_bigstep n e1 rho) as r1.
-    remember (nom_bigstep n e2 rho) as r2.
+    remember (nom_interp n e1 rho) as r1.
+    remember (nom_interp n e2 rho) as r2.
     destruct r1; try solve [inversion H].
 
     assert (C: closed_val n0). eapply IHn; eauto. fsetdec.
     destruct n0 as [x T rho' e1'].
     inversion C.
-(*     destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H]. *)
     destruct r2; try solve [inversion H].
     assert (closed_val n0). eapply IHn; eauto. fsetdec.
     eauto.
 Qed.
 
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+
 
 
 Lemma commute_subst_envsubst : forall rho x v e,
   closed_env rho ->
   closed_val v  ->
   x \notin dom_rho rho ->
-  nom_envsubst rho ([x ~> nom_unload v] e) =
-                    [x ~> nom_unload v] nom_envsubst rho e.
+  nom_envsubst rho ([x ~> nom_val_to_exp v] e) =
+                    [x ~> nom_val_to_exp v] nom_envsubst rho e.
 Proof.
   induction rho.
   - intros. simpl. auto.
@@ -390,7 +459,7 @@ Proof.
     simpl in *.
     inversion H.
     rewrite subst_exp_subst_exp; auto.
-    rewrite (subst_exp_fresh_eq (nom_unload v)); auto.
+    rewrite (subst_exp_fresh_eq (nom_val_to_exp v)); auto.
     rewrite fv_closed; auto.
     rewrite fv_closed; auto.
 Qed.
@@ -405,14 +474,14 @@ Proof.
   rewrite (subst_exp_fresh_eq e'); auto.
   rewrite H.
   fsetdec.
-  eapply nom_unload_lc_mutual.
+  eapply nom_val_to_exp_lc_mutual.
 Qed.
 
 Lemma nom_soundness : forall n rho e v,
-    val _ v = nom_bigstep n e rho  ->
+    val _ v = nom_interp n e rho  ->
     closed_env rho ->
-    nom_fv e [<=] dom_rho rho ->
-    bigstep (nom_envsubst rho (nom_to_exp e)) (nom_unload v).
+    fv_exp (nom_to_exp e) [<=] dom_rho rho ->
+    bigstep (nom_envsubst rho (nom_to_exp e)) (nom_val_to_exp v).
 Proof.
   induction n.
   intros; simpl in *. inversion H.
@@ -423,8 +492,8 @@ Proof.
     inversion H. subst. clear H1.
     erewrite nom_envsubst_var; eauto.
     econstructor; eauto.
-    eapply nom_unload_is_value.
-    eapply nom_unload_lc_mutual.
+    eapply nom_val_to_exp_is_value.
+    eapply nom_val_to_exp_lc_mutual.
     eapply nom_to_exp_lc.
     inversion H.
   - Case "abs".
@@ -440,16 +509,12 @@ Proof.
     autorewrite with lngen.
     eapply nom_to_exp_lc.
   - Case "app".
-    remember (nom_bigstep n e1 rho) as r1.
-    remember (nom_bigstep n e2 rho) as r2.
+    remember (nom_interp n e1 rho) as r1.
+    remember (nom_interp n e2 rho) as r2.
     destruct r1; try solve [inversion H].
     assert (closed_val n0). eapply nom_closed; eauto. fsetdec.
     destruct n0 as [x T rho' e1'].
     inversion H2.
-
-(*    destruct (AtomSetProperties.In_dec x (dom_rho rho')); try solve [inversion H].
-*)
-
     destruct r2; try solve [inversion H].
     assert (closed_val n0).
     eapply nom_closed; eauto. fsetdec.
@@ -464,10 +529,43 @@ Proof.
 
     rewrite nom_envsubst_app.
     econstructor; eauto.
-    apply nom_unload_is_value.
+    apply nom_val_to_exp_is_value.
     rewrite open_nom_envsubst.
     rewrite <- subst_exp_spec.
     auto.
     rewrite fv_closed. fsetdec.
     auto.
 Qed.
+
+Lemma completeness : forall e v rho,
+    bigstep (nom_envsubst rho (nom_to_exp e)) (nom_val_to_exp v) ->
+    exists n, nom_interp n e rho = val _ v.
+Proof.
+Admitted.
+
+(*
+Definition fmap_res {a b : Set} (f : a -> b) (r : res a) : res b :=
+  match r with
+  | val _ v => val _ (f v)
+  | timeout _ => timeout _
+  | stuck   _ => stuck   _
+  end.
+
+Lemma n_nom_soundness : forall n rho e r,
+    r = nom_interp n e rho  ->
+    closed_env rho ->
+    nom_fv e [<=] dom_rho rho ->
+    fmap_res nom_val_to_exp r = n_bigstep n (nom_envsubst rho (nom_to_exp e)).
+Proof.
+  induction n; intros. simpl in *. subst. simpl. auto.
+  destruct e. simpl in *.
+  - Case "var".
+    remember (rho_lookup x rho) as l.
+    destruct l.
+    erewrite nom_envsubst_var; eauto.
+    destruct n0 as [T y rho' e']. simpl.
+    rewrite nom_envsubst_abs. subst r. simpl.
+    rewrite nom_envsubst_abs. auto.
+    admit.
+  - Case "abs".
+*)
