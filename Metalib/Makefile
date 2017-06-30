@@ -40,15 +40,13 @@ COQMKFILENAME=CoqSrc.mk
 .PHONY: all clean coq dist doc gens
 .SUFFIXES: .v .vo .v.d .v.glob
 
-all: Metalib.mk Stlc.mk
-	@$(MAKE) -f Metalib.mk
-	@$(MAKE) -f Stlc.mk
+all: coq
 
 %.mk : Makefile _%
 	coq_makefile -f _$* -o $*.mk
 
 $(COQMKFILENAME): Makefile
-	{ echo "-R $(LIBNAME) $(LIBNAME) " ; ls $(LIBNAME)/*.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
+	{ echo "-R . $(LIBNAME) " ; ls *.v ; } > _CoqProject && coq_makefile -f _CoqProject -o $(COQMKFILENAME)
 
 coq: $(COQMKFILENAME)
 	@$(MAKE) -f $(COQMKFILENAME)
@@ -60,8 +58,7 @@ install:
 	@$(MAKE) -f $(COQMKFILENAME) install
 
 clean:
-	@$(MAKE) -f Metalib.mk clean
-	@$(MAKE) -f Stlc.mk clean
+	@$(MAKE) -f $(COQMKFILENAME) clean
 
 
 ############################################################################
