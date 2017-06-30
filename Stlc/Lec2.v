@@ -242,15 +242,15 @@ Qed.
 
 
 (*************************************************************************)
-(** * Typing environments *)
+(** * Typing contexts *)
 (*************************************************************************)
 
-(** We represent environments as association lists (lists of pairs of
+(** We represent contexts as association lists (lists of pairs of
     keys and values) whose keys are [atom]s.
 *)
 
-(** For STLC, environments bind [atom]s to [typ]s.  We define an
-    abbreviation [env] for the type of these environments.
+(** For STLC, contexts bind [atom]s to [typ]s.  We define an
+    abbreviation [ctx] for the type of these contexts.
 
     Lists are defined in Coq's standard library, with the constructors
     [nil] and [cons].  The list library includes the [::] notation
@@ -260,24 +260,24 @@ Qed.
     The Metatheory library extends this reasoning by instantiating the
     AssocList library to provide support for association lists whose
     keys are [atom]s.  Everything in this library is polymorphic over
-    the type of objects bound in the environment.  Look in AssocList
+    the type of objects bound in the context.  Look in AssocList
     for additional details about the functions and predicates that we
     mention below.
 *)
 
-(** Environment equality *)
+(** Context equality *)
 
-(** When reasoning about environments, we often need to talk about
-    bindings in the "middle" of an environment. Therefore, it is common
+(** When reasoning about contexts, we often need to talk about
+    bindings in the "middle" of an context. Therefore, it is common
     for lemmas and definitions to use list append in their statements.
     Unfortunately, list append is associative, so two Coq expressions may
-    denote the same environment even though they are not equal.
+    denote the same context even though they are not equal.
 
-    The tactic [simpl_env] reassociates all concatenations of
-    environments to the right.
+    The tactic [simpl_ctx] reassociates all concatenations of
+    contexts to the right.
 *)
 
-Lemma append_assoc_demo : forall (E0 E1 E2 E3:env),
+Lemma append_assoc_demo : forall (E0 E1 E2 E3:ctx),
   E0 ++ (E1 ++ E2) ++ E3 = E0 ++ E1 ++ E2 ++ E3.
 Proof.
   intros.
@@ -286,7 +286,7 @@ Proof.
   reflexivity.
 Qed.
 
-(** To make environments easy to read, instead of building them from
+(** To make contexts easy to read, instead of building them from
     [nil] and [cons], we prefer to build them from the following
     components:
       - [nil]: The empty list.
@@ -303,7 +303,7 @@ Qed.
     lists with an append.
 *)
 
-Lemma simpl_env_demo : forall (x y:atom) (T1 T2:typ) (E F:env),
+Lemma simpl_env_demo : forall (x y:atom) (T1 T2:typ) (E F:ctx),
    ((x ~ T1) ++ nil) ++ (y,T2) :: (nil ++ E) ++ F =
    (x ~ T1) ++ (y ~ T2) ++ E ++ F.
 Proof.
@@ -314,9 +314,9 @@ Proof.
 Qed.
 
 (** Note that the [simpl] tactic doesn't produce the "normal form" for
-    environments. It should always be followed up with [simpl_env].
+    contexts. It should always be followed up with [simpl_env].
 
-    Furthermore, to convert an environment to any equivalent form
+    Furthermore, to convert an context to any equivalent form
     other than the normal form (perhaps to apply a lemma) use the
     tactic [rewrite_env].
 *)
@@ -332,19 +332,19 @@ Proof.
   apply H.
 Qed.
 
-(** Environment operations. *)
+(** Context operations. *)
 
 (** The ternary predicate [binds] holds when a given binding is
-    present somewhere in an environment.
+    present somewhere in an context.
 *)
 
-Lemma binds_demo : forall (x:atom) (T:typ) (E F:env),
+Lemma binds_demo : forall (x:atom) (T:typ) (E F:ctx),
   binds x T (E ++ (x ~ T) ++ F).
 Proof.
   auto.
 Qed.
 
-(** The function [dom] computes the domain of an environment,
+(** The function [dom] computes the domain of an context,
     returning a finite set of [atom]s. Note that we cannot use Coq's
     equality for finite sets, we must instead use a defined relation
     [=] for atom set equality.
@@ -357,7 +357,7 @@ Proof.
 Qed.
 
 (** The unary predicate [uniq] holds when each atom is bound at most
-    once in an environment.
+    once in an context.
 *)
 
 Lemma uniq_demo : forall (x y : atom) (T : typ),
@@ -422,8 +422,8 @@ Ltac gather_atoms ::=
 
 (** The definition of the typing relation is straightforward.  In
     order to ensure that the relation holds for only well-formed
-    environments, we check in the [typing_var] case that the
-    environment is [uniq].  The structure of typing derivations
+    contexts, we check in the [typing_var] case that the
+    context is [uniq].  The structure of typing derivations
     implicitly ensures that the relation holds only for locally closed
     expressions.
 
@@ -431,7 +431,7 @@ Ltac gather_atoms ::=
     the [typing_abs] case.
 *)
 
-Inductive typing_e : env -> exp -> typ -> Prop :=
+Inductive typing_e : ctx -> exp -> typ -> Prop :=
   | typing_e_var : forall E (x : atom) T,
       uniq E ->
       binds x T E ->
@@ -457,8 +457,8 @@ Hint Constructors typing_e.
 (*************************************************************************)
 
 (** Weakening states that if an expression is typeable in some
-    environment, then it is typeable in any well-formed extension of
-    that environment.  This property is needed to prove the
+    context, then it is typeable in any well-formed extension of
+    that context.  This property is needed to prove the
     substitution lemma.
 
     As stated below, this lemma is not directly proveable.  The
@@ -480,14 +480,14 @@ Proof.
 Admitted.
 
 (** We are stuck in the [typing_abs] case because the induction
-    hypothesis [IHtyping_e] applies only when we weaken the environment at its
-    head.  In this case, however, we need to weaken the environment in
+    hypothesis [IHtyping_e] applies only when we weaken the context at its
+    head.  In this case, however, we need to weaken the context in
     the middle; compare the conclusion at the point where we're stuck
     to the hypothesis [H], which comes from the given typing derivation.
 
     We can obtain a more useful induction hypothesis by changing the
     statement to insert new bindings into the middle of the
-    environment, instead of at the head.  However, the proof still
+    context, instead of at the head.  However, the proof still
     gets stuck, as can be seen by examining each of the cases in
     the proof below.
 
@@ -496,7 +496,7 @@ Admitted.
     "[Focus n]".
 *)
 
-Lemma typing_weakening_strengthened_0 : forall (E F G : env) e T,
+Lemma typing_weakening_strengthened_0 : forall (E F G : ctx) e T,
   typing_e (G ++ E) e T ->
   uniq (G ++ F ++ E) ->
   typing_e (G ++ F ++ E) e T.
@@ -510,14 +510,14 @@ Proof.
     (* The [typing_abs] case still does not have a strong enough IH. *)
 Admitted.
 
-(** The hypotheses in the [typing_var] case include an environment
+(** The hypotheses in the [typing_var] case include an context
     [G0] that that has no relation to what we need to prove.  The
     missing fact we need is that [G0 = (G ++ E)].
 
     The problem here arises from the fact that Coq's [induction]
     tactic let's us only prove something about all typing derivations.
     While it's clear to us that weakening applies to all typing
-    derivations, it's not clear to Coq, because the environment is
+    derivations, it's not clear to Coq, because the context is
     written using concatenation.  The [induction] tactic expects that
     all arguments to a judgement are variables.  So we see [E0] in the
     proof instead of [(G ++ E)].
@@ -542,7 +542,7 @@ Admitted.
     dependent], as illustrated below.
 *)
 
-Lemma typing_weakening_strengthened_1 :  forall (E F G : env) e T,
+Lemma typing_weakening_strengthened_1 :  forall (E F G : ctx) e T,
   typing_e (G ++ E) e T ->
   uniq (G ++ F ++ E) ->
   typing_e (G ++ F ++ E) e T.
@@ -560,7 +560,7 @@ Admitted.
 Print typing_abs.
 
 (** At this point, we are very close. However, there is still one issue. We
-    cannot show that [x] is fresh for the weakened environment [F].
+    cannot show that [x] is fresh for the weakened context [F].
 
     This is the difficulty with the definition of [typing_e]. As in the local
     closure judgement, the induction hypotheses is not strong enough in the
@@ -574,7 +574,7 @@ Print typing_abs.
 
 <<
 | typing_abs :
-    forall (L : atoms) (G : env) (T1 : typ) (e : exp) (T2 : typ),
+    forall (L : atoms) (G : ctx) (T1 : typ) (e : exp) (T2 : typ),
     (forall x, x `notin` L -> typing ([(x, T1)] ++ G) (e ^ x) T2) ->
     typing (abs T1 e) (typ_arrow T1 T2) >>
 >>
@@ -619,7 +619,7 @@ Print typing_abs.
          hypotheses.
   *)
 
-Lemma typing_weakening_strengthened :  forall (E F G : env) e T,
+Lemma typing_weakening_strengthened :  forall (E F G : ctx) e T,
   typing (G ++ E) e T ->
   uniq (G ++ F ++ E) ->
   typing (G ++ F ++ E) e T.
@@ -655,7 +655,7 @@ Qed.
     interesting step is the use of the rewrite_env tactic.
 *)
 
-Lemma typing_weakening : forall (E F : env) e T,
+Lemma typing_weakening : forall (E F : ctx) e T,
     typing E e T ->
     uniq (F ++ E) ->
     typing (F ++ E) e T.
@@ -715,7 +715,7 @@ Qed.
 
   *)
 
-Lemma typing_subst_var_case : forall (E F : env) u S T (z x : atom),
+Lemma typing_subst_var_case : forall (E F : ctx) u S T (z x : atom),
   binds x T (F ++ (z ~ S) ++ E) ->
   uniq (F ++ (z ~ S) ++ E) ->
   typing E u S ->
@@ -780,7 +780,7 @@ Qed.
         Use [simpl] to simplify the substitution.
 *)
 
-Lemma typing_subst : forall (E F : env) e u S T (z : atom),
+Lemma typing_subst : forall (E F : ctx) e u S T (z : atom),
   typing (F ++ (z ~ S) ++ E) e T ->
   typing E u S ->
   typing (F ++ E) ([z ~> u] e) T.
@@ -822,7 +822,7 @@ Qed.
     and [simpl_env] to simplify nil away.
 *)
 
-Lemma typing_subst_simple : forall (E : env) e u S T (z : atom),
+Lemma typing_subst_simple : forall (E : ctx) e u S T (z : atom),
   typing ((z ~ S) ++ E) e T ->
   typing E u S ->
   typing E ([z ~> u] e) T.
@@ -904,7 +904,7 @@ Qed.
 
   *)
 
-Lemma preservation : forall (E : env) e e' T,
+Lemma preservation : forall (E : ctx) e e' T,
   typing E e T ->
   step e e' ->
   typing E e' T.
@@ -938,7 +938,7 @@ Qed.
 
     Proof sketch: By induction on the typing derivation for [e].
 
-      - [typing_var] case: Can't happen; the empty environment doesn't
+      - [typing_var] case: Can't happen; the empty context doesn't
         bind anything.
 
       - [typing_abs] case: Abstractions are values.
@@ -972,7 +972,7 @@ Qed.
 
 Lemma progress : forall e T,
   typing nil e T ->
-  is_value_of_exp e \/ exists e', step e e'.
+  is_value e \/ exists e', step e e'.
 Proof.
   intros e T H.
 
@@ -1000,7 +1000,9 @@ Proof.
       + SCase "e1 is a value".
       destruct IHtyping2 as [V2 | [e2' Step2]]; auto.
         SSCase "e2 is a value".
-        destruct e1; inversion V1; subst. exists (open_exp_wrt_exp e1 e2); eauto using typing_to_lc_exp.
+        destruct e1; inversion V1; subst.
+        inversion H. inversion H5.
+        exists (open_exp_wrt_exp e1 e2); eauto using typing_to_lc_exp.
         SSCase "e2 is not a value".
           exists (app e1 e2'). eauto using typing_to_lc_exp.
       + SCase "e1 is not a value".
@@ -1030,7 +1032,7 @@ Qed.
 (*
    However, before we prove renaming, we need an auxiliary lemma about
    typing judgments which says that terms are well-typed only in
-   unique environments.
+   unique contexts.
 *)
 
 Lemma typing_uniq : forall E e T,
@@ -1155,9 +1157,9 @@ Proof.
   induction LC; intros E Uniq.
   - Case "typing_var".
     destruct (@binds_lookup_dec _ x E) as [[T H] | H].
-      SCase "variable is in environment".
+      SCase "variable is in context".
       left; eauto.
-      SCase "variable not in environment".
+      SCase "variable not in context".
       right.  intros [T J]. inversion J; subst; eauto.
   - Case "typing_abs".
     (* To know whether the body typechecks, we must first
@@ -1240,7 +1242,7 @@ Qed.
 
 Lemma app_cong2 : forall e1 e2 e2',
     lc_exp e1 ->
-    is_value_of_exp e1 ->
+    is_value e1 ->
     multistep e2 e2' -> multistep (app e1 e2) (app e1 e2').
 Proof. induction 3.
   - eapply ms_refl; eauto.
@@ -1262,21 +1264,7 @@ Proof.
   auto.
   eapply ms_refl; auto.
 Qed.
-(*
-Lemma smallstep_bigstep1 : forall e e', step e e' -> forall v, bigstep e v -> bigstep e' v.
-Proof.
-  induction 1; intros.
-  - inversion H2; simpl in *; try contradiction. subst.
-    inversion H6. subst.
-    destruct v; simpl in *; try contradiction.
-    inversion H7; simpl in *; try contradiction; subst.
-    auto.
-  - inversion H1; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-  - inversion H2; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-Qed.
-*)
+
 Lemma smallstep_bigstep2 : forall e e', step e e' -> forall v, bigstep e' v -> bigstep e v.
 Proof.
   induction 1; intros.
@@ -1289,7 +1277,7 @@ Proof.
 Qed.
 
 
-Lemma smallstep_bigstep : forall e v, multistep e v -> is_value_of_exp v -> bigstep e v.
+Lemma smallstep_bigstep : forall e v, multistep e v -> is_value v -> bigstep e v.
 Proof.
   induction 1; intros.
   - destruct e; simpl in *; auto; try contradiction.
@@ -1300,7 +1288,7 @@ Qed.
 (***********************************************************)
 
 (* We also want a property that states that the free variables of well-typed
-   terms are contained within the domain of their typing environments. *)
+   terms are contained within the domain of their typing contexts. *)
 Lemma fv_in_dom : forall G e T,
     typing G e T -> fv_exp e [<=] dom G.
 Proof.

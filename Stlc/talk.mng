@@ -1,5 +1,7 @@
 \documentclass{beamer}
 
+\setbeamertemplate{theorems}[normal font]
+\setbeamertemplate{navigation symbols}{}
 
 \usepackage[utf8]{inputenc}
 
@@ -8,7 +10,9 @@
 \usepackage{supertabular}
 
 \usepackage{mathpartir}
-%\usepackage{ottalt}
+\usepackage{listings}
+\usepackage{lstlangcoq}
+\lstset{basicstyle=\ttfamily,language=Coq}
 
 \input{stlc-rules}
 
@@ -48,22 +52,81 @@
 
 \ottdefnstep{}
 
-$[[\x:T.x]]$
-
-
-\begin{lemma}[Deterministic step]
-If $[[e --> e1]]$ and $[[e --> e2]]$ then $[[e1]] = [[e2]]$.
-\end{lemma}
+Alpha-equivalence
+\[
+  [[\x:base.x]] \equiv [[\y:base.y]]
+\]
+Capture-avoiding substitution:
+\[ [[ (\y:base.z) [z ~> \x:base. y] ]] \equiv [[\y1:base.\x:base. y]] \]
 
 \end{frame}
 
 \begin{frame}
-\frametitle{Properties of STLC}
+\frametitle{Lessons}
 
-
+\begin{enumerate}
+\item Use an adequate representation to specify this language
+\item Prove that your optimized rep implements that specification
+\item Most difficult proofs involve \emph{open} terms
+\item Tool support helps immensely
+\end{enumerate}
 
 \end{frame}
 
 
+\begin{frame}[fragile]
+\frametitle{Many adequate representations with tool support:}
+\begin{enumerate}
+\item Nominal terms (Nominal Isabelle)
+\item De Bruijn indices (Coq: Autosubst, Needle/Knot)
+\item Locally nameless (Coq: Ott/LNgen)
+\end{enumerate}
+
+Locally nameless representation:
+\begin{enumerate}
+\item Bound variables represented by indices
+  (all $\alpha$-equiv terms are equal)
+\item Free variables represented by names
+\end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Locally nameless representation}
+
+\begin{lstlisting}
+ Inductive exp : Set :=
+ | var_b (n:nat)          (* index    *)
+ | var_f (x:var)          (* name    *)
+ | abs (T:typ) (e:exp)    (* no name *)
+ | app (e1:exp) (e2:exp).
+\end{lstlisting}
+
+Alpha-equivalence is definitional equality
+\[ [[\x:base.x]] = \mbox{\lstinline|abs (var_b 0)|} \qquad
+[[\y:base.y]] = \mbox{\lstinline|abs (var_b 0)|} \]
+
+Capture avoiding substitution
+\[ [[ (\y:base.z) [z ~> \x:base. y] ]] \equiv [[\y1:base.\x:base. y]]  \]
+
+\centerline{\lstinline|abs(var_f Z)[Z ~> abs(var_f Y)] = abs (abs (var_f Y))|}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Capture-avoiding substitution}
+\begin{lstlisting}
+Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
+  match e with
+  | (var_b n) => var_b n
+  | (var_f x) => (if eq_var x y then u else (var_f x))
+  | (abs T e1) => abs T (subst_exp u y e1)
+  | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
+end.
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+\end{frame}
 
 \end{document}

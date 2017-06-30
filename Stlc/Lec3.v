@@ -349,7 +349,7 @@ Qed.
 
 *)
 
-Lemma nom_val_to_exp_is_value : forall v, is_value_of_exp (nom_val_to_exp v).
+Lemma nom_val_to_exp_is_value : forall v, is_value (nom_val_to_exp v).
 Proof.
   destruct v. simpl. rewrite nom_envsubst_abs.
   simpl. auto.

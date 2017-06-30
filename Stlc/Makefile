@@ -2,6 +2,14 @@ RULESFILE = stlc-rules.tex
 
 all:talk.pdf
 
+clean: Stlc.mk
+	make -f Stlc.mk clean
+
+coq: Stlc.mk
+	make -f Stlc.mk
+
+Stlc.mk:
+	coq_makefile -f _CoqProject -o Stlc.mk
 
 %.pdf : %.tex Makefile
 	latexmk -bibtex -pdf $*.tex
@@ -26,7 +34,7 @@ Stlc.v: stlc.ott Makefile
 	make METALIB.FIX_Stlc
 
 Stlc_inf.v: stlc.ott Makefile
-	lngen --coq Stlc_inf.v --coq-ott Stlc stlc.ott
+	lngen --coq-no-proofs --coq Stlc_inf.v --coq-ott Stlc stlc.ott
 	make METALIB.FIX_Stlc_inf
 
 %.vo : %.v

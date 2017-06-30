@@ -1,5 +1,5 @@
 %% This file uses the Ott tool to specify the grammar, typing and
-%% evaluation rules for STLC
+%% evaluation rules for the call-by-value lambda calculus
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% METAVARIABLES
@@ -20,25 +20,26 @@ grammar
 
 typ, T :: 'typ_' ::= {{ com types }}
   | base        ::   :: base
+    {{ tex \mathsf{o} }}
   | T1 -> T2    ::   :: arrow
 
-exp, e :: ''     ::= {{ com expressions }}
-  | x              ::   :: var
-  | \ x : T . e    ::   :: abs
+exp, e, v :: ''     ::= {{ com expressions }}
+  | \ x . e        ::   :: abs
     (+ bind x in e +)
-	 {{ tex [[\]][[x]]\!:\![[T]].[[e]] }}
+	 {{ tex [[\]][[x]].[[e]] }}
+  | x              ::   :: var
   | e1 e2          ::   :: app
   | e1 [ x ~> e2 ] :: M :: subst
      {{ coq (open_exp_wrt_exp [[x e1]][[e2]]) }}
-  | ( e )          :: M :: paren
+  | ( e )          :: S :: paren
      {{ coq ([[e]]) }}
 
-
 substitutions
-  single exp x :: subst
+  single exp x   :: subst
+
 
 freevars
-  exp x        :: fv
+  exp x      :: fv
 
 parsing
   typ_arrow right typ_arrow
@@ -48,15 +49,10 @@ parsing
 
 grammar
 
-
 ctx, G {{ tex \Gamma }} :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
   | empty          ::   :: Empty {{ coq nil }}
   | G , x : T      ::   :: Cons  {{ coq (([[x]]~[[T]])++[[G]]) }}
 
-value, v :: 'v_' ::= {{ com values }}
-  | \ x : T . e   ::        :: abs
-    (+ bind x in e +)
-	 {{ tex [[\]][[x]]\!:\![[T]].[[e]] }}
 
 terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -71,6 +67,8 @@ terminals :: 'terminals_' ::=
 
 formula :: 'formula_' ::=
   | judgement                ::   :: judgement
+  | is_value v               ::   :: is_value
+    {{ coq is_value [[v]] }}
   | uniq G                   ::   :: uniqG
     {{ coq uniq [[G]] }}
   | x : T in G               ::   :: inG
@@ -80,13 +78,17 @@ formula :: 'formula_' ::=
   | x notin dom G            ::   :: notInGx
     {{ coq ~ AtomSetImpl.In [[x]] (dom [[G]]) }}
 
-subrules
-
-v <:: e
 
 
 embed
 {{ coq
+
+Definition is_value (e : exp) : Prop :=
+  match e with
+  | abs _   => True
+  | var_f _ => True
+  | _       => False
+  end.
 
 Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
 Notation "e1 ^ x"       := (open_exp_wrt_exp e1 (var_f x)).
@@ -108,7 +110,7 @@ G |- x : T
 
 G, x:T1 |- e : T2
 -------------------------- :: abs
-G |- \x:T1. e : T1 -> T2
+G |- \x. e : T1 -> T2
 
 
 G |- e1 : T1 -> T2
@@ -124,16 +126,18 @@ defn
 e --> e' ::   :: step :: 'step_'
 by
 
+% is_value v
 ------------------------------- :: beta
-(\x:T1.e1) v --> e1 [x ~> v]
+(\x.e1) v --> e1 [x ~> v]
 
 e1 --> e1'
 ----------------- :: app1
 e1 e2 --> e1' e2
 
-e2 --> e2'
------------------ :: app2
-v e2 --> v e2'
+% e2 --> e2'
+% is_value v
+% ----------------- :: app2
+% v e2 --> v e2'
 
 defns
 
@@ -143,7 +147,7 @@ defn
 e ==> v  ::  :: bigstep :: 'bs_'
 by
 
-e1 ==> \x:T1.e1'
+e1 ==> \x.e1'
 e2 ==> v1
 e1' [ x ~> v1 ] ==> v2
 ---------------------- :: app
@@ -151,3 +155,39 @@ e1 e1 ==> v2
 
 ----------------- :: val
 v ==> v
+
+
+defns
+
+Jeq :: '' ::=
+
+defn
+e = e' ::  :: eq :: 'eq_'  by
+
+
+------ :: refl
+e = e
+
+e1 = e2
+--------- :: sym
+e2 = e1
+
+e1 = e2
+e2 = e3
+--------- :: trans
+e1 = e3
+
+is_value v
+--------------------- :: beta
+(\x.e) v = e [x ~> v]
+
+
+e1 = e2
+------------- :: abs_cong
+\x.e1 = \x.e2
+
+
+e1 = e1'
+e2 = e2'
+--------------- :: app_cong
+e1 e1' = e2 e2'
