@@ -3,6 +3,12 @@ RULESFILE = stlc-rules.tex
 all:talk.pdf
 
 
+coq: Stlc.mk
+	make -f Stlc.mk
+
+Stlc.mk:
+	coq_makefile -f _CoqProject -o Stlc.mk
+
 %.pdf : %.tex Makefile
 	latexmk -bibtex -pdf $*.tex
 
