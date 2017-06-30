@@ -49,12 +49,12 @@ Inductive exp : Set :=  (*r expressions *)
 *)
 
 (** substitutions *)
-Fixpoint subst_exp (e_5:exp) (x5:var) (e__6:exp) {struct e__6} : exp :=
-  match e__6 with
-  | (var_b nat) => var_b nat
-  | (var_f x) => (if eq_var x x5 then e_5 else (var_f x))
-  | (abs T e) => abs T (subst_exp e_5 x5 e)
-  | (app e1 e2) => app (subst_exp e_5 x5 e1) (subst_exp e_5 x5 e2)
+Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
+  match e with
+  | (var_b n) => var_b n
+  | (var_f x) => (if eq_var x y then u else (var_f x))
+  | (abs T e1) => abs T (subst_exp u y e1)
+  | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
 end.
 
 (*************************************************************************)
@@ -164,7 +164,7 @@ Inductive lc_exp : exp -> Prop :=    (* defn lc_exp *)
     keys and values) whose keys are [atom]s.
 *)
 
-Definition env : Set := list ( atom * typ ).
+Definition ctx : Set := list ( atom * typ ).
 
 (** For STLC, environments bind [atom]s to [typ]s.  We define an abbreviation
     [env] for the type of these environments.
@@ -199,15 +199,15 @@ Definition env : Set := list ( atom * typ ).
 (** definitions *)
 
 (* defns JTyping *)
-Inductive typing : env -> exp -> typ -> Prop :=
- | typing_var : forall (G:env) (x:var) (T:typ),
+Inductive typing : ctx -> exp -> typ -> Prop :=
+ | typing_var : forall (G:ctx) (x:var) (T:typ),
      uniq G ->
      binds x T G  ->
      typing G (var_f x) T
- | typing_abs : forall (L:vars) (G:env) (T1:typ) (e:exp) (T2:typ),
+ | typing_abs : forall (L:vars) (G:ctx) (T1:typ) (e:exp) (T2:typ),
      (forall x , x \notin L -> typing ((x ~ T1) ++ G) (open_exp_wrt_exp e (var_f x)) T2)  ->
      typing G (abs T1 e) (typ_arrow T1 T2)
- | typing_app : forall (G:env) (e1 e2:exp) (T2 T1:typ),
+ | typing_app : forall (G:ctx) (e1 e2:exp) (T2 T1:typ),
      typing G e1 (typ_arrow T1 T2) ->
      typing G e2 T1 ->
      typing G (app e1 e2) T2 .
@@ -224,33 +224,33 @@ Inductive typing : env -> exp -> typ -> Prop :=
     Note the hypotheses which ensure that the relations hold only for locally
     closed terms.  *)
 
-Definition is_value_of_exp (e_5:exp) : Prop :=
+Definition is_value (e_5:exp) : Prop :=
   match e_5 with
   | (var_b n) => False
-  | (var_f x) => False
+  | (var_f x) => True
   | (abs T e) => (True)
   | (app e1 e2) => False
 end.
 
 
-(* defns JEval *)
-Inductive eval : exp -> exp -> Prop :=    (* defn eval *)
- | eval_beta : forall (T1:typ) (e1 v:exp),
-     is_value_of_exp v ->
+(* defns JStep *)
+Inductive step : exp -> exp -> Prop :=    (* defn step *)
+ | step_beta : forall (T1:typ) (e1 v:exp),
+     is_value v ->
      lc_exp (abs T1 e1) ->
      lc_exp v ->
-     eval (app  ( (abs T1 e1) )  v)  (open_exp_wrt_exp  e1 v )
- | eval_app1 : forall (e1 e2 e1':exp),
+     step (app  ( (abs T1 e1) )  v)  (open_exp_wrt_exp  e1 v )
+ | step_app1 : forall (e1 e2 e1':exp),
      lc_exp e2 ->
-     eval e1 e1' ->
-     eval (app e1 e2) (app e1' e2)
- | eval_app2 : forall (e2 v e2':exp),
-     is_value_of_exp v ->
+     step e1 e1' ->
+     step (app e1 e2) (app e1' e2)
+ | step_app2 : forall (e2 v e2':exp),
+     is_value v ->
      lc_exp v ->
-     eval e2 e2' ->
-     eval (app v e2) (app v e2').
+     step e2 e2' ->
+     step (app v e2) (app v e2').
 
-Hint Constructors typing eval lc_exp.
+Hint Constructors typing step lc_exp.
 
 (*************************************************************************)
 (** * Big-step Evaluation *)
@@ -258,16 +258,43 @@ Hint Constructors typing eval lc_exp.
 
 Inductive bigstep : exp -> exp -> Prop :=    (* defn bigstep *)
  | bs_app : forall (e1 v2:exp) (T1:typ) (e1' e2 v1:exp),
-     is_value_of_exp v1 ->
+     is_value v1 ->
      bigstep e1 (abs T1 e1') ->
      bigstep e2 v1 ->
      bigstep  (open_exp_wrt_exp  e1' v1 )  v2 ->
      bigstep (app e1 e2) v2
 | bs_val : forall (v:exp),
-     is_value_of_exp v ->
+     is_value v ->
      lc_exp v ->
      bigstep v v.
 Hint Constructors bigstep.
+
+(*************************************************************)
+
+
+Inductive eq : ctx -> exp -> exp -> typ -> Prop :=    (* defn eq *)
+ | eq_refl : forall (G:ctx) (e:exp) (T:typ),
+     typing G e T ->
+     eq G e e T
+ | eq_sym : forall (G:ctx) (e2 e1:exp) (T:typ),
+     eq G e1 e2 T ->
+     eq G e2 e1 T
+ | eq_trans : forall (G:ctx) (e1 e3:exp) (T:typ) (e2:exp),
+     eq G e1 e2 T ->
+     eq G e2 e3 T ->
+     eq G e1 e3 T
+ | eq_beta : forall (G:ctx) (T1:typ) (e v:exp) (T2:typ),
+     is_value v ->
+     typing G (app  ( (abs T1 e) )  v) T2 ->
+     eq G (app  ( (abs T1 e) )  v)  (open_exp_wrt_exp  e v )  T2
+ | eq_abs_cong : forall (L:vars) (G:ctx) (T1:typ) (e1 e2:exp) (T2:typ),
+      ( forall x , x \notin  L  -> eq  (( x ~ T1 )++ G )   ( open_exp_wrt_exp e1 (var_f x) )   ( open_exp_wrt_exp e2 (var_f x) )  T2 )  ->
+     eq G (abs T1 e1) (abs T1 e2) (typ_arrow T1 T2)
+ | eq_app_cong : forall (G:ctx) (e1 e1' e2 e2':exp) (T2 T1:typ),
+     eq G e1 e1' (typ_arrow T1 T2) ->
+     eq G e2 e2' T1 ->
+     eq G (app e1 e1') (app e2 e2') T2.
+Hint Constructors eq.
 
 (*************************************************************)
 
