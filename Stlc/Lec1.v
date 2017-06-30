@@ -362,7 +362,7 @@ Proof. induction 1; auto. Qed.
 
 Inductive multistep : exp -> exp -> Prop :=
 | ms_refl : forall e, lc_exp e -> multistep e e
-| ms_step : forall e1 e2 e3, eval e1 e2 -> multistep e2 e3 -> multistep e1 e3.
+| ms_step : forall e1 e2 e3, step e1 e2 -> multistep e2 e3 -> multistep e1 e3.
 Hint Constructors multistep.
 
 (*
@@ -396,7 +396,7 @@ Proof.
   eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
   apply (@ms_trans (open_exp_wrt_exp e1' v1)).
   eapply ms_step.
-  apply eval_beta;
+  apply step_beta;
   eauto using bigstep_lc1, bigstep_lc2.
   eapply ms_refl; eauto using bigstep_lc1.
   auto.
@@ -404,7 +404,7 @@ Proof.
 Qed.
 *)
 (*
-Lemma smallstep_bigstep1 : forall e e', eval e e' -> forall v, bigstep e v -> bigstep e' v.
+Lemma smallstep_bigstep1 : forall e e', step e e' -> forall v, bigstep e v -> bigstep e' v.
 Proof.
   induction 1; intros.
   - inversion H2; simpl in *; try contradiction. subst.
@@ -418,7 +418,7 @@ Proof.
     eapply bs_app; eauto.
 Qed.
 *)
-Lemma smallstep_bigstep_aux : forall e e', eval e e' -> forall v, bigstep e' v -> bigstep e v.
+Lemma smallstep_bigstep_aux : forall e e', step e e' -> forall v, bigstep e' v -> bigstep e v.
 Proof.
   induction 1; intros.
   - eapply bs_app; eauto.

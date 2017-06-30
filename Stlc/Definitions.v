@@ -234,23 +234,23 @@ end.
 
 
 (* defns JEval *)
-Inductive eval : exp -> exp -> Prop :=    (* defn eval *)
- | eval_beta : forall (T1:typ) (e1 v:exp),
+Inductive step : exp -> exp -> Prop :=    (* defn step *)
+ | step_beta : forall (T1:typ) (e1 v:exp),
      is_value_of_exp v ->
      lc_exp (abs T1 e1) ->
      lc_exp v ->
-     eval (app  ( (abs T1 e1) )  v)  (open_exp_wrt_exp  e1 v )
- | eval_app1 : forall (e1 e2 e1':exp),
+     step (app  ( (abs T1 e1) )  v)  (open_exp_wrt_exp  e1 v )
+ | step_app1 : forall (e1 e2 e1':exp),
      lc_exp e2 ->
-     eval e1 e1' ->
-     eval (app e1 e2) (app e1' e2)
- | eval_app2 : forall (e2 v e2':exp),
+     step e1 e1' ->
+     step (app e1 e2) (app e1' e2)
+ | step_app2 : forall (e2 v e2':exp),
      is_value_of_exp v ->
      lc_exp v ->
-     eval e2 e2' ->
-     eval (app v e2) (app v e2').
+     step e2 e2' ->
+     step (app v e2) (app v e2').
 
-Hint Constructors typing eval lc_exp.
+Hint Constructors typing step lc_exp.
 
 (*************************************************************************)
 (** * Big-step Evaluation *)
