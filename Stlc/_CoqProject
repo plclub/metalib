@@ -1,0 +1,6 @@
+-R . Stlc
+Definitions.v
+Lemmas.v
+Lec1.v
+Lec2.v
+Lec3.v

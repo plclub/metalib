@@ -36,7 +36,7 @@
 Require Import Metalib.Metatheory.
 
 (** Next, we import the definitions of the simply-typed lambda calculus. *)
-Require Import Definitions.
+Require Import Stlc.Definitions.
 
 
 (*************************************************************************)
