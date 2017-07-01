@@ -181,6 +181,186 @@ Admitted.
 
 (* ------------------------------------------ *)
 
+(* This is the hard part --- the definition of alpha equivalence
+   and the proof that alpha-equivalent named terms
+   map to the same LN term. *)
+
+Lemma swap_swap: forall x y n,
+  swap x y (swap x y n) = n.
+Admitted.
+
+Lemma swap_id : forall x n,
+    swap x x n = n.
+Admitted.
+
+
+Fixpoint size (n : n_exp) : nat :=
+  match n with
+  | n_var x => 1
+  | n_abs x e => 1 + size e
+  | n_app e1 e2 => 1 + size e1 + size e2
+  end.
+
+Lemma swap_size_constant : forall x y n,
+    size n = size (swap x y n).
+Proof.
+  induction n; simpl; auto.
+Qed.
+
+Fixpoint support (n : n_exp) : atoms :=
+  match n with
+  | n_var x => {{x}}
+  | n_abs x n => AtomSetImpl.remove x (support n)
+  | n_app n1 n2 => support n1 `union` support n2
+  end.
+
+Lemma support_fv_exp_eq : forall n,
+    fv_exp (nom_to_exp n) [=] support n.
+Proof.
+  induction n; intros; simpl; autorewrite with lngen; try fsetdec.
+Qed.
+
+Inductive aeq : n_exp -> n_exp -> Prop :=
+ | aeq_var : forall x, aeq (n_var x) (n_var x)
+ | aeq_abs_same : forall x n1 n2, aeq n1 n2 -> aeq (n_abs x n1) (n_abs x n2)
+ | aeq_abs_diff : forall x y n1 n2,
+     x <> y ->
+     x `notin` support n2 ->
+     aeq n1 (swap y x n2) ->
+     aeq (n_abs x n1) (n_abs y n2)
+ | aeq_app : forall n1 n2 n1' n2',
+     aeq n1 n1' -> aeq n2 n2' -> aeq (n_app n1 n2) (n_app n1' n2').
+
+Hint Constructors aeq.
+
+Lemma notin_other : forall x y S, x <> y -> x `notin` remove y S -> x `notin` S.
+intros. fsetdec.
+Qed.
+
+(*
+[x ~> y] (\y. x) = \. y
+swap x y (\y. x) = \. y
+*)
+
+Lemma swap_spec : forall n w y,
+    y `notin` fv_exp (nom_to_exp n) ->
+    w <> y ->
+    [w ~> var_f y] (nom_to_exp n) =
+    nom_to_exp (swap w y n).
+Proof.
+  induction n; intros; simpl in *.
+  + unfold swap_var.
+    destruct (x == w); auto.
+    destruct (x == y); auto.
+    fsetdec.
+  + unfold swap_var.
+    destruct (x == w). subst.
+    ++ (* w is the binder *)
+       rewrite subst_exp_fresh_eq; auto.
+       rewrite <- IHn.
+       rewrite subst_exp_spec.
+       autorewrite with lngen.
+       auto.
+       rewrite fv_exp_close_exp_wrt_exp in H.
+       fsetdec. auto.
+       autorewrite with lngen.
+       fsetdec.
+    ++ destruct (x == y). subst.
+       (* y is the binder *)
+       admit.
+       (* neither are binders *)
+       rewrite <- IHn; auto.
+       rewrite subst_exp_close_exp_wrt_exp; auto.
+       autorewrite with lngen in H.
+       fsetdec.
+  + rewrite IHn1; auto; try fsetdec.
+    rewrite IHn2; auto; try fsetdec.
+Admitted.
+
+Lemma aeq_nom_to_exp : forall n1 n2, aeq n1 n2 -> nom_to_exp n1 = nom_to_exp n2.
+Proof.
+  induction 1; simpl; eauto.
+  - rewrite IHaeq; auto.
+  - rewrite IHaeq.
+    f_equal.
+    rewrite <- support_fv_exp_eq in H0.
+    eapply open_exp_wrt_exp_inj with (x1 := x);
+    try (autorewrite with lngen; fsetdec).
+    rewrite open_exp_wrt_exp_close_exp_wrt_exp.
+    rewrite <- subst_exp_spec.
+    rewrite swap_spec; auto.
+  - rewrite IHaeq1. rewrite IHaeq2. auto.
+Qed.
+
+Lemma nom_to_exp_eq_aeq : forall n1 n2, nom_to_exp n1 = nom_to_exp n2 -> aeq n1 n2.
+Proof.
+  induction n1; intro n2; destruct n2; intro H; inversion H; eauto.
+  - destruct (x == x0).
+    subst. apply close_exp_wrt_exp_inj in H1. eauto.
+    assert (FX : x `notin` fv_exp (nom_to_exp n2)).
+    { intro IN.
+      assert (x `in` fv_exp (nom_to_exp (n_abs x0 n2))).
+      { simpl. autorewrite with lngen. fsetdec. }
+      rewrite <- H in H0.
+      simpl in H0. autorewrite with lngen in H0.
+      fsetdec. }
+    eapply aeq_abs_diff; auto.
+    + rewrite <- support_fv_exp_eq. auto.
+    + eapply IHn1.
+      rewrite <- swap_spec; eauto.
+      rewrite subst_exp_spec.
+      rewrite <- H1.
+      autorewrite with lngen.
+      auto.
+Qed.
+
+
+(*
+Lemma close_swap : forall x x0 n0,
+  x <> x0 ->
+  x0 `notin` fv_exp (close_exp_wrt_exp x (nom_to_exp n0)) ->
+  close_exp_wrt_exp x (nom_to_exp n0) =
+  close_exp_wrt_exp x0 (nom_to_exp (swap x x0 n0)).
+Proof.
+  induction n0; intros; simpl in *.
+  unfold swap_var.
+  destruct (x1 == x). subst.
+  simpl.
+*)
+Lemma subst_swap : forall x0 x (h : heap) e n0,
+    x <> x0 ->
+    x0 `notin` fv_exp (nom_to_exp n0) ->
+(*    fv_exp (close_exp_wrt_exp x (nom_to_exp n0)) [<=] dom h ->
+    fv_exp e [<=] dom h -> *)
+    [x ~> e] nom_to_exp n0 = [x0 ~> e] nom_to_exp (swap x x0 n0).
+Proof.
+  induction n0; intros; simpl in *.
+  - destruct (x1 == x). subst.
+    unfold swap_var.
+    destruct (x == x); try contradiction.
+    destruct (x0 == x0); try contradiction.
+    auto.
+    unfold swap_var.
+    destruct (x1 == x); try contradiction.
+    destruct (x1 == x0); try contradiction.
+    destruct (x == x0); try contradiction.
+    subst. fsetdec.
+    destruct (x1 == x0); try contradiction.
+    auto.
+  - f_equal.
+    unfold swap_var.
+    destruct (x1 == x); try contradiction.
+    subst.
+    rewrite subst_exp_fresh_eq.
+    rewrite subst_exp_fresh_eq.
+
+    rewrite subst_exp_spec.
+
+    rewrite subst_exp_close_exp_wrt_exp with (x1 := x0).
+
+    destruct (x1 == x0); try contradiction.
+
+
 Definition swap_atoms x y S :=
   if AtomSetImpl.mem x S then
     if AtomSetImpl.mem y S then S
@@ -558,7 +738,22 @@ Proof.
           apply app_cong.
 
           simpl.
+
+          assert (open (apply_heap h (close_exp_wrt_exp x (nom_to_exp n0)))
+                        (apply_heap h (nom_to_exp n)) =
+                  (apply_heap h ([x0 ~> nom_to_exp n]
+                                   nom_to_exp (swap x x0 n0)))).
+          {
+            rewrite <- apply_heap_open.
+            f_equal.
+            rewrite <- subst_exp_spec.
+          }
           admit.
+          rewrite <- H.
+          eapply step_beta; eauto with lngen.
+          rewrite <- apply_heap_abs.
+          apply apply_heap_lc.
+          econstructor; eauto with lngen.
 (*          rewrite apply_heap_open.
           rewrite apply_heap_var; eauto.
 
