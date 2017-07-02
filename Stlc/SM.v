@@ -3,8 +3,12 @@ Require Import Metalib.Metatheory.
 Require Import Stlc.Stlc.
 Require Import Stlc.Stlc_inf.
 
+(* Some of our proofs are by induction on the *size* of
+   terms. We use the Omega tactic to easily dispatch reasoning
+   about natural numbers. *)
+Require Import Omega.
 
-Notation open e a := (open_exp_wrt_exp e a).
+(* Notation open e a := (open_exp_wrt_exp e a). *)
 
 
 (*************************************************************)
@@ -16,39 +20,96 @@ Notation open e a := (open_exp_wrt_exp e a).
 
 Inductive n_exp : Set :=
  | n_var (x:var)
- | n_abs (x:var) (e:n_exp)
- | n_app (e1:n_exp) (e2:n_exp).
+ | n_abs (x:var) (t:n_exp)
+ | n_app (t1:n_exp) (t2:n_exp).
 
-(* We can rename variables *)
+(* We can swap variables: this operation is
+   symmetric: x becomes y and y becomes x. *)
 Definition swap_var (x:var) (y:var) (z:var) : var :=
   if (z == x) then y else if (z == y) then x else z.
-Fixpoint swap (x:var) (y:var) (e:n_exp) : n_exp :=
-  match e with
-  | n_var z => n_var (swap_var x y z)
-  | n_abs z e => n_abs (swap_var x y z) (swap x y e)
-  | n_app e1 e2 => n_app (swap x y e1) (swap x y e2)
+
+(* The main insight of nominal representations:
+   We can rename variables, without capture, using a simple
+   structural induction. Note how the [n_abs} case
+   we swap all variables, both bound and free.
+
+   For example:
+
+      (swap x y) (\z. (x y)) = \x. (y x))
+
+      (swap x y) (\x. x) = \y.y
+
+      (swap x y) (\y. x) = \x.y
+
+
+*)
+Fixpoint swap (x:var) (y:var) (t:n_exp) : n_exp :=
+  match t with
+  | n_var z     => n_var (swap_var x y z)
+  | n_abs z t1  => n_abs (swap_var x y z) (swap x y t1)
+  | n_app t1 t2 => n_app (swap x y t1) (swap x y t2)
   end.
 
-Fixpoint support (n : n_exp) : atoms :=
+(* The free variable function needs to remove the
+   bound variable in the [n_abs] case. *)
+Fixpoint fv_nom (n : n_exp) : atoms :=
   match n with
   | n_var x => {{x}}
-  | n_abs x n => AtomSetImpl.remove x (support n)
-  | n_app n1 n2 => support n1 `union` support n2
+  | n_abs x n => AtomSetImpl.remove x (fv_nom n)
+  | n_app n1 n2 => fv_nom n1 `union` fv_nom n2
   end.
+
+(* We can also define the "alpha-equivalence" relation
+   that declares when two nominal terms are equivalent
+   (up to swapping).
+
+   Note the two different rules for [n_abs]: either the
+   binders are the same and we can directly compare the
+   bodies, or the binders differ, but we can swap one
+   side to make it look like the other.
+
+ *)
+Inductive aeq : n_exp -> n_exp -> Prop :=
+ | aeq_var : forall x,
+     aeq (n_var x) (n_var x)
+ | aeq_abs_same : forall x n1 n2,
+     aeq n1 n2 -> aeq (n_abs x n1) (n_abs x n2)
+ | aeq_abs_diff : forall x y n1 n2,
+     x <> y ->
+     x `notin` fv_nom n2 ->
+     aeq n1 (swap y x n2) ->
+     aeq (n_abs x n1) (n_abs y n2)
+ | aeq_app : forall n1 n2 n1' n2',
+     aeq n1 n1' -> aeq n2 n2' ->
+     aeq (n_app n1 n2) (n_app n1' n2').
+
+Hint Constructors aeq.
+
+
+(* -------------------------------------------------------- *)
+(* An abstract machine for named terms                      *)
+
+(* The advantage of named terms is a much more efficient operational
+   semantics. We don't need to recurse terms, opening and closing each
+   binder. Instead, as long as the binder is "sufficiently fresh" we can use
+   the name as is, and only rename (via swapping) when absolutely
+   necessary. *)
+
+(* We also don't even need to use substitution for our semantics.  Our
+   abstract maching will work with configurations (see below) which consist of
+   a head (i.e. delayed substitution) a term, and a stack. *)
 
 Definition heap := list (atom * n_exp).
 
+Inductive frame : Set := | n_app2 : n_exp -> frame.
+Notation  stack := (list frame).
 
-(* An abstract machine for named terms *)
+Definition conf := (heap * n_exp * stack)%type.
 
-Inductive frame : Set :=
-| n_app2 : n_exp -> frame.
 
-Definition conf := (heap * n_exp * list frame)%type.
-
-Definition initconf (e : n_exp) : conf := (nil,e,nil).
-
-(* The semantics *)
+(* The (small-step) semantics: a function from configurations to
+   configurations, until there are no more reductions to be
+   done. *)
 
 Inductive Step a := Error   : Step a
                  | Done     : Step a
@@ -69,9 +130,10 @@ Definition machine_step (c : conf) : Step conf :=
       | n_app2 a :: s' =>
         match e with
         | n_abs x e =>
+          (* if the bound name [x] is not fresh, we need to rename it *)
           if AtomSetProperties.In_dec x (dom h)  then
-            let (fresh,_) := atom_fresh (dom h) in
-            TakeStep _ ((fresh, a):: h, swap x fresh e, s')
+            let (y,_) := atom_fresh (dom h) in
+            TakeStep _ ((y,a)::h, swap x y e, s')
           else
             TakeStep _ ((x,a)::h, e, s')
         | _ => Error _ (* non-function applied to argument *)
@@ -79,7 +141,7 @@ Definition machine_step (c : conf) : Step conf :=
       end
     else match e with
          | n_var x => match get x h with
-                     | Some e => TakeStep _ (h, e, s)
+                     | Some e  => TakeStep _ (h, e, s)
                      | Nothing => Error _ (* Unbound variable *)
                      end
          | n_app e1 e2 => TakeStep _ (h, e1, n_app2 e2 :: s)
@@ -87,10 +149,11 @@ Definition machine_step (c : conf) : Step conf :=
          end
   end.
 
+Definition initconf (e : n_exp) : conf := (nil,e,nil).
 
 
 (*
-Example run (may take extra steps):
+Example run (may take extra steps compared to substitution semantics):
 
       {}, (\y. (\x. x) y) 0 , nil                  (\y. (\x. x) y) 0
   ==> {}, (\y. (\x. x) y), app2 0 :: nil           (\y. (\x. x) y) 0
@@ -108,6 +171,8 @@ decode {y -> 0}, (\x.x), app2 y :: nil
 *)
 
 (* ------------------------------------------- *)
+
+
 
 (* Translation from machine configurations to LN terms *)
 
@@ -147,14 +212,15 @@ Definition decode (c:conf) : exp  :=
   | (h,e,s) => apply_heap h (apply_stack (decode_stack s) (nom_to_exp e))
   end.
 
+
+
 (* -----------------------------------------  *)
 
-Lemma nom_to_exp_lc : forall ne, lc_exp (nom_to_exp ne).
+
+
+Lemma nom_to_exp_lc : forall t, lc_exp (nom_to_exp t).
 Proof.
-  induction ne; simpl; auto.
-  eapply lc_abs_exists with (x1 := x).
-  rewrite open_exp_wrt_exp_close_exp_wrt_exp.
-  auto.
+  induction t; default_simp; eauto with lngen.
 Qed.
 
 Hint Resolve nom_to_exp_lc : lngen.
@@ -163,7 +229,7 @@ Lemma apply_heap_lc : forall h e,
     lc_exp e ->
     lc_exp (apply_heap h e).
 Proof.
-  induction h; intros; try destruct a; simpl in *; auto with lngen.
+  induction h; try destruct a; simpl in *; auto with lngen.
 Qed.
 
 Hint Resolve apply_heap_lc : lngen.
@@ -172,42 +238,48 @@ Lemma apply_stack_lc : forall s e,
     lc_exp e ->
     lc_exp (apply_stack (decode_stack s) e).
 Proof.
-  induction s; intros; try destruct a; simpl in *; auto with lngen.
+  induction s; try destruct a; simpl in *; auto with lngen.
 Qed.
 
 Hint Resolve apply_stack_lc : lngen.
 
 Lemma decode_lc : forall c, lc_exp (decode c).
 Proof.
-  intro c.
-  destruct c as [[h e] s].
-  simpl.
-  eauto with lngen.
+  intro c; destruct c as [[h e] s]; simpl; auto with lngen.
 Qed.
+
+
 
 (* ------------------------------------------ *)
 
+(* Here's our first result about our decoding: that the two
+   free variable functions agree. *)
 
-(* This is the hard part --- the definition of alpha equivalence
-   and the proof that alpha-equivalent named terms
-   map to the same LN term. *)
+Lemma fv_nom_fv_exp_eq : forall n,
+    fv_exp (nom_to_exp n) [=] fv_nom n.
+Proof.
+  induction n; intros; simpl; autorewrite with lngen; fsetdec.
+Qed.
 
-(*
-(* Applies the heap as a *simultaneous* substitution *)
-Fixpoint apply_subst (L: atoms) (h : heap) (n : n_exp) {struct n} :=
-  match n with
-  | n_var z => match get z h with
-                | Some t => t
-                | None   => n_var z
-              end
-  | n_abs x t => let (y, _) := atom_fresh L in
-                n_abs y (apply_subst (L \u {{y}}) ((x, n_var y)::h) t)
-  | n_app t1 t2 => n_app (apply_subst L h t1) (apply_subst L h t2)
-  end.
 
-(* Capture avoiding substitution. *)
-Definition n_subst x t n := apply_subst (support n) (x ~ t) n. *)
+(* Next, we show that nominal terms are aeq iff they decode to the same LN
+   terms.
 
+   The tricky part of this reasoning below is a lemma that lets us
+   convert swapping (with fresh variables) in the nominal calculus
+   to substitution in the LN representation.
+
+<<
+Lemma swap_spec : forall  n w y,
+    y `notin` fv_exp (nom_to_exp n) ->
+    w <> y ->
+    [w ~> var_f y] (nom_to_exp n) =
+    nom_to_exp (swap w y n).
+>>
+
+ *)
+
+(* SCW: Make LNgen generate this? *)
 Lemma close_exp_wrt_exp_freshen : forall x y e,
     y `notin` fv_exp e ->
     close_exp_wrt_exp x e =
@@ -217,33 +289,32 @@ Proof.
   unfold close_exp_wrt_exp.
   generalize 0 as k.
   generalize e. clear e.
-  induction e; intros k Fr; default_simp.
+  induction e; default_simp.
 Qed.
 
+(* Properties about nominal terms. *)
 
-Lemma subst_exp_close_avoid : forall e x x0 u y,
-    lc_exp u ->
-    x <> y ->
-    y  `notin` fv_exp u \u fv_exp e ->
-    [x ~> u] close_exp_wrt_exp x0 e =
-    close_exp_wrt_exp y ([x ~> u]([x0 ~> var_f y] e)).
+(* Some are straightforward to prove *)
+
+Lemma fv_nom_swap : forall z y n,
+  z `notin` fv_nom n ->
+  y `notin` fv_nom (swap y z n).
 Proof.
-  intros.
-  rewrite (close_exp_wrt_exp_freshen x0 y); auto.
-  rewrite subst_exp_close_exp_wrt_exp; auto.
+  induction n; intros; simpl; unfold swap_var; default_simp.
 Qed.
 
-Require Import Omega.
+Lemma shuffle_swap : forall w y n z,
+    w <> z -> y <> z ->
+    (swap w y (swap y z n)) = (swap w z (swap w y n)).
+Proof.
+  induction n; intros; simpl; unfold swap_var; default_simp.
+Qed.
 
 
-Lemma swap_swap: forall x y n,
-  swap x y (swap x y n) = n.
-Admitted.
-
-Lemma swap_id : forall x n,
-    swap x x n = n.
-Admitted.
-
+(* Other proofs about nominal terms involve swapping to make sure that
+   the variable names are "fresh enough". In this case, we need to
+   strengthen our induction hypothesis.
+ *)
 
 Fixpoint size (n : n_exp) : nat :=
   match n with
@@ -253,196 +324,108 @@ Fixpoint size (n : n_exp) : nat :=
   end.
 
 Lemma swap_size_constant : forall x y n,
-    size n = size (swap x y n).
+    size (swap x y n) = size n.
 Proof.
   induction n; simpl; auto.
 Qed.
 
+Hint Rewrite swap_size_constant.
 
-Lemma support_fv_exp_eq : forall n,
-    fv_exp (nom_to_exp n) [=] support n.
-Proof.
-  induction n; intros; simpl; autorewrite with lngen; try fsetdec.
-Qed.
-
-(*
-Fixpoint subst_n_aux (n:nat) (u:n_exp) (x:atom) (t:n_exp) : n_exp :=
-  match n with
-  | 0 => t
-  | S m => match t with
-          | n_var z    => if (z == x) then u else n_var z
-          | n_abs z t1 => if (z == x) then t else
-                           if (AtomSetProperties.In_dec z (support u)) then
-                             let (y, _) := atom_fresh (support u) in
-                             n_abs y (subst_n_aux m u x (swap x y t1))
-                           else n_abs z (subst_n_aux m u x t1)
-          | n_app t1 t2 => n_app (subst_n_aux m u x t1) (subst_n_aux m u x t2)
-          end
-  end.
-
-Definition subst_n u x t := subst_n_aux (size t) u x t.
-
-Lemma subst_n_subst_eq : forall n,
-    forall u x t, size t <= n ->
-         nom_to_exp (subst_n u x t) = subst_exp (nom_to_exp u) x (nom_to_exp t).
+Lemma nominal_induction_size L :
+     forall n, forall t, size t <= n ->
+     forall P : n_exp -> Prop,
+    (forall x, P (n_var x)) ->
+    (forall x t, (forall y, y `notin` L -> P (swap x y t)) -> P (n_abs x t)) ->
+    (forall t1 t2, P t1 -> P t2 -> P (n_app t1 t2)) ->
+    P t.
 Proof.
   induction n.
-  intros u x t SZ.
-  destruct t; simpl in SZ; omega.
-  intros u x t SZ.
-  destruct t; unfold subst_n; simpl in *.
-  - destruct (x0 == x). auto. auto.
-  - destruct (x0 == x).
-    { subst. simpl.
-      rewrite subst_exp_fresh_eq. auto.
-      autorewrite with lngen. fsetdec. }
-    destruct (AtomSetProperties.In_dec x0 (support u)).
-    { destruct (atom_fresh (support u)) as [y Fr].
-      rewrite <- support_fv_exp_eq in *.
-      simpl.
-      rewrite subst_exp_close_exp_wrt_exp; eauto with lngen.
-*)
-Lemma notin_other : forall x y S, x <> y -> x `notin` remove y S -> x `notin` S.
-intros. fsetdec.
+  intros t SZ; destruct t; simpl in *; inversion SZ.
+  intros t SZ P VAR ABS APP; destruct t; simpl in *.
+  - auto.
+  - apply ABS.
+    intros y Fr.
+    apply IHn; eauto; rewrite swap_size_constant; try omega.
+  - apply APP.
+    apply IHn; eauto; omega.
+    apply IHn; eauto; omega.
 Qed.
 
-Lemma support_swap : forall z y n,
-  z `notin` support n ->
-  y `notin` support (swap y z n).
-Proof.
-  induction n; intros; simpl; unfold swap_var; default_simp.
-Qed.
+Definition nominal_induction
+  : forall (L : atoms) (P : n_exp -> Prop),
+    (forall x : atom, P (n_var x)) ->
+    (forall (x : atom) (t : n_exp),
+        (forall y : atom, y `notin` L -> P (swap x y t)) -> P (n_abs x t)) ->
+    (forall t1 t2 : n_exp, P t1 -> P t2 -> P (n_app t1 t2)) ->
+    forall t : n_exp, P t :=
+  fun L P VAR APP ABS t =>
+  nominal_induction_size L (size t) t ltac:(auto) P VAR APP ABS.
 
-
-Lemma shuffle_swap : forall w y n z,
-    w <> z -> y <> z ->
-    (swap w y (swap y z n)) = (swap w z (swap w y n)).
-Proof.
-  induction n; intros; simpl; unfold swap_var.
-  - default_simp.
-  - default_simp.
-  - default_simp.
-Qed.
-
-
-(*
-[x ~> y] (\y. x) = \. y
-swap x y (\y. x) = \. y
-*)
-
-
-(*
-Lemma same_binder : forall m x y n,
-  size n <= m ->
-  y `notin` fv_exp (nom_to_exp n) \u {{x}} ->
-  close_exp_wrt_exp x (nom_to_exp n) =
-  close_exp_wrt_exp y (nom_to_exp (swap x y n)).
-Proof.
-  induction m; intros x y n SZ;
-  destruct n; simpl in *; try omega;
-  intros.
-  + unfold swap_var.
-    destruct (x0 == x). admit.
-    destruct (x0 == y); subst. fsetdec.
-    admit.
-  + unfold swap_var.
-    destruct (x0 == x). subst.
-    (* x is the binder on abs (so close has no effect) *)
-    admit.
-    destruct (x0 == y). subst.
-    (* y is the binder on abs, IH does not apply *)
-Admitted.
-*)
-Lemma swap_spec_aux : forall m n w y,
-    size n <= m ->
-    y `notin` fv_exp (nom_to_exp n) ->
+Lemma swap_spec_aux : forall m t w y,
+    size t <= m ->
+    y `notin` fv_exp (nom_to_exp t) ->
     w <> y ->
-    [w ~> var_f y] (nom_to_exp n) =
-    nom_to_exp (swap w y n).
+    [w ~> var_f y] (nom_to_exp t) =
+    nom_to_exp (swap w y t).
 Proof.
-  induction m; intros n w y SZ;
-  destruct n; simpl in *; try omega;
+  induction m; intros t w y SZ;
+  destruct t; simpl in *; try omega;
   intros.
+  + unfold swap_var. default_simp.
   + unfold swap_var.
-    destruct (x == w); auto.
-    destruct (x == y); auto.
-    fsetdec.
-  + unfold swap_var.
-    destruct (x == w). subst.
-    ++ (* w is the binder *)
-       rewrite subst_exp_fresh_eq; auto.
-       rewrite <- IHm.
-       rewrite subst_exp_spec.
-       autorewrite with lngen.
-       auto.
-       omega.
-       rewrite fv_exp_close_exp_wrt_exp in H.
-       fsetdec. auto.
-       autorewrite with lngen.
-       fsetdec.
-    ++ destruct (x == y). subst.
-       (* y is the binder *)
-       f_equal.
-       autorewrite with lngen in H.
-
+    destruct (x == w); subst.
+    { (* w is the binder *)
+      autorewrite with lngen in *.
+      rewrite subst_exp_fresh_eq;
+        autorewrite with lngen in *; try fsetdec.
+      rewrite <- IHm; auto; try omega.
+      rewrite subst_exp_spec.
+      rewrite close_exp_wrt_exp_open_exp_wrt_exp. auto.
+      autorewrite with lngen. fsetdec. }
+    destruct (x == y). subst.
+    { (* y is the binder *)
+       autorewrite with lngen in *.
        (* don't know anything about w or y. Either one could
           appear in n. So our IH is useless now. *)
        (* Let's pick a fresh variable z and use it with that. *)
-
        pick fresh z for (
-              fv_exp (nom_to_exp n) \u
-              fv_exp (nom_to_exp (swap w y n)) \u {{w}} \u {{y}}).
+              fv_exp (nom_to_exp t) \u
+              fv_exp (nom_to_exp (swap w y t)) \u {{w}} \u {{y}}).
 
-       rewrite subst_exp_close_avoid with (x:=w)(x0:=y)(y:=z); eauto.
-       rewrite IHm; eauto; try omega.
+       rewrite (close_exp_wrt_exp_freshen y z); auto.
+       rewrite subst_exp_close_exp_wrt_exp; auto.
+
+       rewrite IHm; auto; try omega.
        rewrite (close_exp_wrt_exp_freshen w z); auto.
 
-       rewrite IHm; eauto; try omega.
-       rewrite IHm; eauto; try omega.
+       rewrite IHm; auto; try rewrite swap_size_constant; try omega.
+       rewrite IHm; auto; try rewrite swap_size_constant; try omega.
 
-       replace (swap w y (swap y z n)) with (swap w z (swap w y n)).
-       auto.
        rewrite shuffle_swap; auto.
-       rewrite <- swap_size_constant; omega.
-       rewrite <- swap_size_constant; omega.
-
-       assert (y `notin` fv_exp (nom_to_exp (swap y z n))).
-       rewrite support_fv_exp_eq.
-       apply support_swap.
-       rewrite <- support_fv_exp_eq.
+       rewrite fv_nom_fv_exp_eq.
+       apply fv_nom_swap.
+       rewrite <- fv_nom_fv_exp_eq.
        fsetdec.
-       auto.
-
-       (* neither are binders *)
-       rewrite <- IHm; auto.
+    }
+    { (* neither are binders *)
+       rewrite <- IHm; auto; try omega.
        rewrite subst_exp_close_exp_wrt_exp; auto.
-       omega.
-       autorewrite with lngen in H.
+       autorewrite with lngen in *.
        fsetdec.
+    }
   + rewrite IHm; auto; try omega; try fsetdec.
     rewrite IHm; auto; try omega; try fsetdec.
 Qed.
 
-Lemma swap_spec : forall  n w y,
-    y `notin` fv_exp (nom_to_exp n) ->
+Lemma swap_spec : forall t w y,
+    y `notin` fv_exp (nom_to_exp t) ->
     w <> y ->
-    [w ~> var_f y] (nom_to_exp n) =
-    nom_to_exp (swap w y n).
-Admitted.
-
-Inductive aeq : n_exp -> n_exp -> Prop :=
- | aeq_var : forall x, aeq (n_var x) (n_var x)
- | aeq_abs_same : forall x n1 n2, aeq n1 n2 -> aeq (n_abs x n1) (n_abs x n2)
- | aeq_abs_diff : forall x y n1 n2,
-     x <> y ->
-     x `notin` support n2 ->
-     aeq n1 (swap y x n2) ->
-     aeq (n_abs x n1) (n_abs y n2)
- | aeq_app : forall n1 n2 n1' n2',
-     aeq n1 n1' -> aeq n2 n2' -> aeq (n_app n1 n2) (n_app n1' n2').
-
-Hint Constructors aeq.
-
+    [w ~> var_f y] (nom_to_exp t) =
+    nom_to_exp (swap w y t).
+Proof.
+  intros.
+  eapply swap_spec_aux with (t:=t)(m:=size t); auto.
+Qed.
 
 Lemma aeq_nom_to_exp : forall n1 n2, aeq n1 n2 -> nom_to_exp n1 = nom_to_exp n2.
 Proof.
@@ -450,7 +433,7 @@ Proof.
   - rewrite IHaeq; auto.
   - rewrite IHaeq.
     f_equal.
-    rewrite <- support_fv_exp_eq in H0.
+    rewrite <- fv_nom_fv_exp_eq in H0.
     eapply open_exp_wrt_exp_inj with (x1 := x);
     try (autorewrite with lngen; fsetdec).
     rewrite open_exp_wrt_exp_close_exp_wrt_exp.
@@ -472,7 +455,7 @@ Proof.
       simpl in H0. autorewrite with lngen in H0.
       fsetdec. }
     eapply aeq_abs_diff; auto.
-    + rewrite <- support_fv_exp_eq. auto.
+    + rewrite <- fv_nom_fv_exp_eq. auto.
     + eapply IHn1.
       rewrite <- swap_spec; eauto.
       rewrite subst_exp_spec.
@@ -480,119 +463,6 @@ Proof.
       autorewrite with lngen.
       auto.
 Qed.
-
-
-(*
-Lemma close_swap : forall x x0 n0,
-  x <> x0 ->
-  x0 `notin` fv_exp (close_exp_wrt_exp x (nom_to_exp n0)) ->
-  close_exp_wrt_exp x (nom_to_exp n0) =
-  close_exp_wrt_exp x0 (nom_to_exp (swap x x0 n0)).
-Proof.
-  induction n0; intros; simpl in *.
-  unfold swap_var.
-  destruct (x1 == x). subst.
-  simpl.
-*)
-Lemma subst_swap : forall x0 x (h : heap) e n0,
-    x <> x0 ->
-    x0 `notin` fv_exp (nom_to_exp n0) ->
-(*    fv_exp (close_exp_wrt_exp x (nom_to_exp n0)) [<=] dom h ->
-    fv_exp e [<=] dom h -> *)
-    [x ~> e] nom_to_exp n0 = [x0 ~> e] nom_to_exp (swap x x0 n0).
-Proof.
-  induction n0; intros; simpl in *.
-  - destruct (x1 == x). subst.
-    unfold swap_var.
-    destruct (x == x); try contradiction.
-    destruct (x0 == x0); try contradiction.
-    auto.
-    unfold swap_var.
-    destruct (x1 == x); try contradiction.
-    destruct (x1 == x0); try contradiction.
-    destruct (x == x0); try contradiction.
-    subst. fsetdec.
-    destruct (x1 == x0); try contradiction.
-    auto.
-  - f_equal.
-    unfold swap_var.
-    destruct (x1 == x); try contradiction.
-    subst.
-    rewrite subst_exp_fresh_eq.
-    rewrite subst_exp_fresh_eq.
-    admit.
-Abort.
-
-Definition swap_atoms x y S :=
-  if AtomSetImpl.mem x S then
-    if AtomSetImpl.mem y S then S
-    else (add y (AtomSetImpl.remove x S))
-  else
-    if AtomSetImpl.mem y S then
-      (add x (AtomSetImpl.remove y S))
-    else
-      S.
-
-Lemma commute_remove : forall x y S, remove x (remove y S) [=] remove y (remove x S).
-intros. fsetdec.
-Qed.
-
-
-Lemma fv_swap_fresh : forall x0 x (h : heap) n0
- (Fr1 : x0 `notin` dom h)
- (SE : remove x (fv_exp (nom_to_exp n0)) [<=] dom h),
-  fv_exp (nom_to_exp (swap x x0 n0)) [<=] add x0 (dom h).
-Proof.
-  induction n0; intros; simpl in *.
-  + unfold swap_var.
-    destruct (x1== x). subst. fsetdec.
-    destruct (x1 == x0). subst. fsetdec.
-    fsetdec.
-  + rewrite fv_exp_close_exp_wrt_exp in *.
-    unfold swap_var.
-    destruct (x1 == x). subst.
-    rewrite IHn0; auto. fsetdec. fsetdec.
-    destruct (x1 == x0). subst.
-    rewrite IHn0; auto. fsetdec.
-    rewrite commute_remove in SE.
-    admit.
-    rewrite IHn0; auto. fsetdec.
-    admit.
-Abort.
-
-Lemma fv_swap_var : forall x y z,
-    singleton (swap_var x y z) [=] swap_atoms x y (singleton z).
-Proof.
-  intros x y z.
-  unfold swap_var, swap_atoms.
-  destruct (z == x).
-  subst.
-Admitted.
-
-Lemma fv_swap : forall x y e,
-    fv_exp (nom_to_exp (swap x y e)) [<=] {{x}} \u {{y}} \u fv_exp (nom_to_exp e).
-Proof.
-  induction e.
-  - simpl.
-    unfold swap_var.
-    destruct (x0 == x). subst. fsetdec.
-    destruct (x0 == y). subst. fsetdec.
-    fsetdec.
-  - simpl.
-    rewrite fv_exp_close_exp_wrt_exp.
-    rewrite IHe.
-    rewrite fv_exp_close_exp_wrt_exp.
-    unfold swap_var.
-    destruct (x0 == x). subst.
-    admit.
-    destruct (x0 == y). subst.
-    admit.
-    fsetdec.
-  - simpl.
-    rewrite IHe1.
-    rewrite IHe2.
-    fsetdec.
-Admitted.
 
 (* ------------------------------------------ *)
 
@@ -614,18 +484,38 @@ Qed.
 
 Lemma apply_heap_open : forall h e e0,
     lc_exp e0 ->
-    apply_heap h (open e e0)  = open (apply_heap h e) (apply_heap h e0).
+    apply_heap h (open_exp_wrt_exp e e0)  =
+       open_exp_wrt_exp (apply_heap h e) (apply_heap h e0).
 Proof.
   induction h; intros; simpl; eauto.
   destruct a; eauto.
   rewrite subst_exp_open_exp_wrt_exp; eauto with lngen.
 Qed.
 
+
+
+(* ------------------------------------------ *)
+
+(* Next, we define when a heap is "well-scoped".
+   well-scoped heaps have certain properties wrt [get]. *)
+
 Fixpoint fv_heap  (h : heap) :=
   match h with
   | nil => {}
   | (x,e) :: h => fv_exp (nom_to_exp e) \u fv_heap h
   end.
+
+Lemma apply_heap_close : forall h x e,
+    x `notin` dom h ->
+    x `notin` fv_heap h ->
+    apply_heap h (close_exp_wrt_exp x e) =
+    close_exp_wrt_exp x (apply_heap h e).
+Proof.
+  induction h; intros; simpl; eauto.
+  destruct a; eauto; simpl in *.
+  rewrite subst_exp_close_exp_wrt_exp; eauto with lngen.
+Qed.
+
 
 Inductive scoped_heap : heap -> Prop :=
   | scoped_nil  : scoped_heap nil
@@ -679,62 +569,6 @@ Proof. induction h; intros; simpl.
        contradiction.
 Qed.
 
-Lemma apply_heap_get :  forall h x e,
-    scoped_heap h ->
-    get x h = Some e ->
-    apply_heap h (var_f x) = apply_heap h (nom_to_exp e).
-Proof.
-  induction 1.
-  intros; simpl in *. inversion H.
-  intros; simpl in *.
-  destruct (KeySetFacts.eq_dec x x0); subst.
-  (* this is it! *)
-  destruct (x0 == x0); try contradiction.
-  inversion H2; subst; clear H2.
-  rewrite subst_exp_fresh_eq; auto.
-  (* this is not it! *)
-  destruct (x == x0); try contradiction.
-
-
-(* ------------------------------------------ *)
-
-Lemma subst_heap : forall n h L,
-  scoped_heap h ->
-  support n [<=] L ->
-  apply_heap h (nom_to_exp n) = nom_to_exp (apply_subst L h n).
-Proof.
-  induction n.
-  - intros; simpl in *.
-    destruct (get x h) eqn:?.
-
-
-(* ------------------------------------------ *)
-
-
-Lemma push :
-  forall s e e',
-    apply_stack s (app e e') =
-    apply_stack (app2 e' :: s) e.
-simpl. auto.
-Qed.
-
-Lemma combine : forall h x e e',
-  apply_heap h ([x ~> nom_to_exp e] e') = (apply_heap ((x,e)::h) e').
-Proof.
-  simpl. auto.
-Qed.
-
-(* ------------------------------------------ *)
-
-
-Fixpoint fv_stack s :=
-  match s with
-    nil => {}
-  | n_app2 e :: s => fv_exp (nom_to_exp e) \u fv_stack s
-  end.
-
-
-
 Lemma scoped_get : forall h x e,
   scoped_heap h ->
   get x h = Some e ->
@@ -757,6 +591,64 @@ Proof.
   auto.
 Qed.
 
+Lemma apply_heap_get :  forall h x e,
+    scoped_heap h ->
+    get x h = Some e ->
+    apply_heap h (var_f x) = apply_heap h (nom_to_exp e).
+Proof.
+  induction 1.
+  intros; simpl in *. inversion H.
+  intros; simpl in *.
+  destruct (KeySetFacts.eq_dec x x0); subst.
+  (* this is it! *)
+  destruct (x0 == x0); try contradiction.
+  inversion H2; subst; clear H2.
+  rewrite subst_exp_fresh_eq; auto.
+  (* this is not it! *)
+  destruct (x == x0); try contradiction.
+  rewrite subst_exp_fresh_eq; auto.
+  assert (fv_exp (nom_to_exp e) [<=] dom h).
+  eapply scoped_get; eauto.
+  fsetdec.
+Qed.
+
+
+(* ------------------------------------------ *)
+
+
+Lemma push :
+  forall s e e',
+    apply_stack s (app e e') =
+    apply_stack (app2 e' :: s) e.
+simpl. auto.
+Qed.
+
+Lemma combine : forall h x e e',
+  apply_heap h ([x ~> nom_to_exp e] e') = (apply_heap ((x,e)::h) e').
+Proof.
+  simpl. auto.
+Qed.
+
+(* ------------------------------------------ *)
+
+Lemma swap_fv_eq : forall x0 x n0,
+  x0 `notin` fv_nom n0 ->
+  x `in` fv_nom n0 ->
+  x0 `in` fv_nom (swap x x0 n0).
+Proof.
+  induction n0; intros; simpl in *.
+  unfold swap_var.  default_simp. fsetdec.
+  unfold swap_var.
+  destruct (x1 == x). fsetdec.
+  destruct (x1 == x0).
+Abort.
+
+Fixpoint fv_stack s :=
+  match s with
+    nil => {}
+  | n_app2 e :: s => fv_exp (nom_to_exp e) \u fv_stack s
+  end.
+
 Lemma machine_is_scoped: forall h e s h' e' s',
     machine_step (h,e,s) = TakeStep _ (h',e',s') ->
     scoped_heap h  /\ fv_exp (nom_to_exp e)  [<=] dom h  /\ fv_stack s [<=] dom h ->
@@ -770,23 +662,27 @@ Proof.
   - inversion H.
   - destruct f eqn:?.
      + destruct e eqn:?; try solve [inversion H].
-(*     destruct n eqn:?.
-       ++ inversion H; subst; clear H; split; auto.
-          simpl in *.
-          rewrite fv_exp_close_exp_wrt_exp in SE.
-          split.
-          admit.
-          fsetdec.
-       ++ *)
-          destruct (atom_fresh (dom h)).
+       destruct (AtomSetProperties.In_dec x (dom h)).
+       ++ destruct (atom_fresh (dom h)).
           inversion H; subst; clear H.
           simpl in *.
           split.
             econstructor; eauto. fsetdec.
           split.
-            rewrite fv_exp_close_exp_wrt_exp in *.
-            admit.
+            assert (x <> x0). fsetdec.
+            autorewrite with lngen in SE.
+            rewrite <- swap_spec; try fsetdec.
+            rewrite fv_exp_subst_exp_upper.
+            simpl.
+            fsetdec.
           fsetdec.
+       ++ inversion H; subst; clear H.
+          simpl in *.
+          autorewrite with lngen in *.
+          repeat split; try fsetdec.
+          econstructor; eauto. fsetdec.
+          rewrite <- SE.
+          eapply FSetDecideTestCases.test_Subset_add_remove.
   - destruct e eqn:?; try solve [inversion H].
     destruct (get x h) eqn:?;
     inversion H; subst; clear H.
@@ -799,7 +695,7 @@ Proof.
     split; auto.
     split; try fsetdec.
     simpl. fsetdec.
-Admitted.
+Qed.
 
 (* --------------------------------------------------------------- *)
 
@@ -847,36 +743,24 @@ Proof.
 Qed.
 
 
-  rewrite subst_exp_fresh_eq; auto.
-  apply scoped_get in H2.
-  fsetdec.
-  auto.
+Lemma app_cong : forall s h e e',
+    step e e' ->
+    step (apply_stack (apply_heap_stack h (decode_stack s)) e)
+         (apply_stack (apply_heap_stack h (decode_stack s)) e').
+Proof.
+  induction s; intros; simpl;
+  try destruct a; simpl; eauto with lngen.
 Qed.
 
 
-Lemma app_cong : forall s e e',
-    step e e' ->
-    step (apply_stack s e) (apply_stack s e').
-Proof.
-  induction s.
-  intros; simpl. auto.
-  intros; simpl.
-  destruct a.
-  apply IHs.
-  econstructor. admit.
-  auto.
-Admitted.
-
-
-(* Could be zero steps! *)
-Lemma simulate_step : forall h e s h' e' s' e0 e0',
+(* Could be zero or one steps! *)
+Lemma simulate_step : forall h e s h' e' s' ,
     machine_step (h,e,s) = TakeStep _ (h',e',s') ->
     scoped_heap h ->
     fv_exp (nom_to_exp e) [<=] dom h ->
     fv_stack s [<=] dom h ->
-    e0 = decode (h,e,s) ->
-    e0' = decode (h',e',s') ->
-    e0 = e0' \/ step e0 e0'.
+    decode (h,e,s) = decode (h',e',s') \/
+    step (decode (h,e,s)) (decode (h',e',s')).
 Proof.
   intros.
   simpl in *.
@@ -885,28 +769,15 @@ Proof.
   - inversion H.
   - destruct f eqn:?.
      + destruct e eqn:?; try solve [inversion H].
-(*       destruct (isTrivial e1).
-       ++ inversion H; subst; clear H.
-          simpl in *.
-          right.
-          rewrite apply_heap_apply_stack.
-          rewrite apply_heap_apply_stack.
-          apply app_cong.
-          rewrite apply_heap_app.
-          rewrite apply_heap_abs.
-          rewrite apply_heap_open.
-          econstructor.
-          admit. (* LC *)
-          admit. (* LC *)
-       ++ *)
-       subst. destruct (atom_fresh).
-       inversion H; subst; clear H.
        right.
-       simpl in *.
-       rewrite combine.
+       destruct (AtomSetProperties.In_dec x (dom h)).
+       -- destruct (atom_fresh).
+          inversion H; subst; clear H.
+          simpl in *.
+          rewrite combine.
 
-       rewrite apply_heap_apply_stack.
-       rewrite apply_heap_apply_stack.
+          rewrite apply_heap_apply_stack.
+          rewrite apply_heap_apply_stack.
 
           rewrite apply_heap_app.
           rewrite apply_heap_abs.
@@ -915,34 +786,49 @@ Proof.
           apply app_cong.
 
           simpl.
+          assert (x <> x0). fsetdec.
+          autorewrite with lngen in *.
 
-          assert (open (apply_heap h (close_exp_wrt_exp x (nom_to_exp n0)))
+          assert (RHS: open_exp_wrt_exp
+                    (apply_heap h (close_exp_wrt_exp x (nom_to_exp n0)))
                         (apply_heap h (nom_to_exp n)) =
                   (apply_heap h ([x0 ~> nom_to_exp n]
                                    nom_to_exp (swap x x0 n0)))).
           {
-            rewrite <- apply_heap_open.
+            rewrite <- apply_heap_open; auto with lngen.
             f_equal.
+            rewrite (subst_exp_intro x0); auto with lngen.
             rewrite <- subst_exp_spec.
+            rewrite <- swap_spec; auto with lngen.
+            rewrite <- H1 in n1.
+            autorewrite with lngen.
+            fsetdec.
           }
-          admit.
-          rewrite <- H.
+          rewrite <- RHS.
           eapply step_beta; eauto with lngen.
           rewrite <- apply_heap_abs.
           apply apply_heap_lc.
           econstructor; eauto with lngen.
-(*          rewrite apply_heap_open.
-          rewrite apply_heap_var; eauto.
+       -- inversion H; subst; clear H.
+          simpl in *.
+          rewrite combine.
 
-          rewrite apply_heap_fresh_eq.
+          rewrite apply_heap_apply_stack.
+          rewrite apply_heap_apply_stack.
 
-          econstructor; eauto.
-          admit. (* LC *)
-          admit. (* LC *)
-          auto.
-          auto.
-          apply scoped_heap_fv_heap_dom in H0.
-          fsetdec. *)
+          rewrite apply_heap_app.
+          rewrite apply_heap_abs.
+
+          rewrite apply_heap_stack_fresh_eq; auto; try fsetdec.
+          apply app_cong.
+
+          simpl.
+          rewrite subst_exp_spec.
+          rewrite apply_heap_open; auto with lngen.
+          apply step_beta; auto with lngen.
+          rewrite <- apply_heap_abs.
+          eapply apply_heap_lc.
+          auto with lngen.
   - destruct e eqn:?; try solve [inversion H].
     destruct (get x h) eqn:?; try solve [inversion H].
     + inversion H; subst; clear H.
@@ -955,7 +841,7 @@ Proof.
       left.
       simpl.
       auto.
-Admitted.
+Qed.
 
 Lemma simulate_done : forall h e s,
     machine_step (h,e,s) = Done _ ->
@@ -976,3 +862,6 @@ Proof.
   - destruct e; inversion H.
     simpl in Heqb. destruct (get x h); inversion H.
 Qed.
+
+
+(* TODO: completeness *)
