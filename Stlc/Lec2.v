@@ -68,17 +68,17 @@ Lemma demo_open_revised :
   (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
   (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   simpl_open.
   reflexivity.
-Qed.
+Qed. (* /ADMITTED *)
 
 
 (*************************************************************************)
 (** * Local closure *)
 (*************************************************************************)
 
-(* The local closure judgement classifies terms that have no dangling
+(* The local closure judgement classifies terms that have *no* dangling
    indices.
 
    Step through this derivation to see why the term is locally closed.
@@ -100,7 +100,6 @@ Qed.
 
 (** The most important properties about open and lc_exp concern their relationship
     with the free variable and subst functions. *)
-
 
 Lemma subst_exp_open_exp_wrt_exp :
 forall e3 e1 e2 x1,
@@ -125,11 +124,11 @@ Lemma subst_var : forall (x y : var) u e,
   lc_exp u ->
   ([x ~> u] e) ^ y = [x ~> u] (e ^ y).
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros x y u e Neq H.
   rewrite subst_exp_open_exp_wrt_exp with (e2 := var_f y); auto.
   rewrite subst_neq_var; auto.
-Qed.
+Qed.   (* /ADMITTED *)
 
 (** *** Take-home Exercise [subst_intro] *)
 
@@ -146,35 +145,65 @@ Lemma subst_exp_intro : forall (x : var) u e,
   x `notin` (fv_exp e) ->
   open e u = [x ~> u](e ^ x).
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros x u e FV_EXP.
   unfold open.
   unfold open_exp_wrt_exp.
   generalize 0.
   induction e; intro n0; simpl.
-  Case "var_b".
+  - Case "var_b".
     destruct (lt_eq_lt_dec n n0).
     destruct s. simpl. auto.
     rewrite subst_eq_var. auto.
     simpl. auto.
-  Case "var_f".
+  - Case "var_f".
     destruct (x0 == x). subst. simpl in FV_EXP. fsetdec. auto.
-  Case "abs".
+  - Case "abs".
     f_equal. simpl in FV_EXP. apply IHe. auto.
-  Case "app".
+  - Case "app".
     simpl in FV_EXP.
     f_equal.
     apply IHe1. auto.
     apply IHe2. auto.
-Qed.
+Qed. (* /ADMITTED *)
 
 
 
 (*************************************************************************)
-(** Forall quantification in inductive predicates. *)
+(** Forall quantification in [lc_exp].                                   *)
 (*************************************************************************)
 
-(* Note: Let's look more closely at lc_abs, lc_exp_ind and lc_abs_exists *)
+(* Let's look more closely at lc_abs and lc_exp_ind. *)
+
+Check lc_exp_ind.
+
+(* The induction principle for the lc_exp relation is particularly strong
+   in the abs case.
+
+<<
+ forall P : exp -> Prop,
+       ...
+       (forall e : exp,
+        (forall x : atom, lc_exp (e ^ x)) ->
+        (forall x : atom, P (e ^ x)) -> P (abs e)) ->
+       ...
+       forall e : exp, lc_exp e -> P e
+>>
+
+  This principle says that to prove that a property holds for an abstraction,
+  we can assume that the property holds for the body of the abstraction,
+  opened with *any* variable that we like.
+
+*)
+
+
+Check lc_abs.
+
+(* However, on the other hand, when we show that an abstraction is locally
+   closed, we need to show that its body is locally closed, when
+   opened by any variable.
+
+   That can sometimes be a problem. *)
 
 Lemma subst_lc0 : forall (x : var) u e,
   lc_exp e ->
@@ -213,8 +242,6 @@ Admitted.
 
     An easier to use lemma, requires us to only show that the body
     of the abstraction is locally closed for a *single* variable.
-    The Lemmas file walks through the proof of this result; for
-    convenience we repeat it below.
 *)
 Lemma lc_abs_exists : forall (x : var) e,
       lc_exp (e ^ x) ->
@@ -222,7 +249,6 @@ Lemma lc_abs_exists : forall (x : var) e,
 Admitted.
 
 (* With this addition, we can complete the proof of subst_lc. *)
-
 
 Lemma subst_exp_lc_exp : forall (x : var) u e,
   lc_exp e ->
@@ -630,7 +656,7 @@ Proof.
   remember (G ++ E) as E'.
   generalize dependent G.
   induction H; intros G0 Eq Uniq; subst.
- (* SOLUTION *)
+ (* ADMITTED *)
   Case "typing_var".
     apply typing_var.
       apply Uniq.
@@ -648,7 +674,7 @@ Proof.
     eapply typing_app.
       eapply IHtyping1. reflexivity. apply Uniq.
       eapply IHtyping2. reflexivity. apply Uniq.
-Qed.
+Qed. (* /ADMITTED *)
 
 
 (** *** Example
@@ -725,7 +751,7 @@ Lemma typing_subst_var_case : forall (E F : ctx) u S T (z x : atom),
 Proof.
   intros E F u S T z x H J K.
   simpl.
- (* SOLUTION *)
+ (* ADMITTED *)
   destruct (x == z).
   Case "x = z".
     subst.
@@ -739,7 +765,7 @@ Proof.
     apply typing_var.
       eapply uniq_remove_mid. apply J.
       eapply binds_remove_mid. apply H. apply n.
-Qed.
+Qed. (* /ADMITTED *)
 
 (** *** Note
 
@@ -787,7 +813,7 @@ Lemma typing_subst : forall (E F : ctx) e u S T (z : atom),
   typing E u S ->
   typing (F ++ E) ([z ~> u] e) T.
 Proof.
-(* SOLUTION *)
+(* ADMITTED *)
   intros E F e u S T z He Hu.
   remember (F ++ (z ~ S) ++ E) as E'.
   generalize dependent F.
@@ -813,7 +839,7 @@ Proof.
     intros F Eq. subst. simpl. eapply typing_app.
       apply IHHe1. reflexivity.
       apply IHHe2. reflexivity.
-Qed.
+Qed. (* /ADMITTED *)
 
 (** *** Exercise
 
@@ -829,13 +855,13 @@ Lemma typing_subst_simple : forall (E : ctx) e u S T (z : atom),
   typing E u S ->
   typing E ([z ~> u] e) T.
 Proof.
-(* SOLUTION *)
+(* ADMITTED *)
   intros E e u S T z H J.
   rewrite_env (nil ++ E).
   eapply typing_subst.
     simpl_env. apply H.
     apply J.
-Qed.
+Qed. (* /ADMITTED *)
 
 (*************************************************************************)
 (** * Values and Evaluation *)
@@ -914,7 +940,7 @@ Proof.
   intros E e e' T H.
   generalize dependent e'.
   induction H; intros e' J.
-(* SOLUTION *)
+(* ADMITTED *)
   Case "typing_var".
     inversion J.
   Case "typing_abs".
@@ -926,7 +952,7 @@ Proof.
       pick fresh y.
       rewrite (subst_exp_intro y); auto.
       eapply typing_subst_simple; auto.
-Qed.
+Qed. (* /ADMITTED *)
 
 (*************************************************************************)
 (** * Progress *)
@@ -990,7 +1016,7 @@ Proof.
 
   induction H; subst.
 
-(* SOLUTION *)
+(* ADMITTED *)
   - Case "typing_var".
     inversion H1.
   - Case "typing_abs".
@@ -1008,7 +1034,7 @@ Proof.
         apply step_app.
           eapply typing_to_lc_exp; eauto.
           assumption.
-Qed.
+Qed. (* /ADMITTED *)
 
 
 (*************************************************************************)
@@ -1097,192 +1123,6 @@ Proof.
   intros y Fr.
   apply typing_rename with (x:=x); auto.
 Qed.
-
-
-(*************************************************************************)
-(** * Decidability of Typechecking *)
-(*************************************************************************)
-
-(* Finally, we give another example of a proof that makes use of the
-   renaming lemma. We show that determining whether a program type
-   checks is decidable.
-*)
-(*
-(** Equality on types is decidable *)
-Lemma eq_typ_dec : forall (T T' : typ),
-  { T = T' } + { T <> T' }.
-Proof.
-  decide equality.
-Qed.
-
-(** Take-home exercise.
-
-    To prove that ill-formed terms cannot be typechecked, we will need an
-    auxiliary lemma that says that each term only has a single type.
-
-    HINT: to prove this lemma you will need to generalize the induction
-    hypothesis for T2 and use the lemma [binds_unique] from [AtomEnv.v].
-*)
-Lemma typing_unique : forall E e T1 T2,
-  typing E e T1 ->
-  typing E e T2 ->
-  T1 = T2.
-Proof.
-(* SOLUTION *)
-  intros E e T1 T2 Typ1 Typ2.
-  generalize dependent T2.
-  induction Typ1; intros T' Typ'; inversion Typ'; subst; eauto.
-  Case "typing_var".
-    eapply binds_unique; eauto.
-  Case "typing_abs".
-    f_equal; eauto.
-    pick fresh x.
-    apply (H0 x); eauto.
-  Case "typing_app".
-    assert (typ_arrow T1 T2 = typ_arrow T3 T') by auto.
-    inversion H; eauto.
-Qed.
-*)
-
-(*
-(* A property P is decidable if we can show the proposition P \/ ~P. *)
-Definition decidable (P : Prop) := (P \/ ~ P).
-
-Lemma typing_decidable : forall E e,
-  lc_exp e -> uniq E -> decidable (exists T, typing E e T).
-Proof.
-  intros E e LC Uniq.
-  generalize dependent E.
-  induction LC; intros E Uniq.
-  - Case "typing_var".
-    destruct (@binds_lookup_dec _ x E) as [[T H] | H].
-      SCase "variable is in context".
-      left; eauto.
-      SCase "variable not in context".
-      right.  intros [T J]. inversion J; subst; eauto.
-  - Case "typing_abs".
-    (* To know whether the body typechecks, we must first
-       pick a fresh variable to use the IH (aka HO).
-    *)
-    pick fresh x.
-    destruct (H0 x ((x ~ T) ++ E)) as [[S J] | J]; eauto.
-    SCase "body typeable".
-      left.
-      exists (typ_arrow T S).
-      (* Check (typing_abs L E (abs T e) T S). *)
-      pick fresh z and apply typing_abs.
-      apply typing_rename with (x := x); eauto.
-    SCase "body not typeable".
-      right.
-      intros [S K].
-      inversion K; subst.
-      apply J.
-      exists T2.
-      pick fresh z.
-      apply typing_rename with (x := z); eauto.
-  - Case "typing_app".
-    destruct (IHLC1 E) as [[T H] | H]; eauto.
-    SCase "function typeable".
-      destruct (IHLC2 E) as [[S J] | J]; eauto.
-      SSCase "argument typeable".
-        destruct T.
-          SSSCase "function has typ_base".
-            right.
-            intros [S' J'].
-            inversion J'; subst.
-            assert (K : typ_base = typ_arrow T1 S'); eauto using typing_unique.
-            inversion K.
-          SSSCase "typ_arrow".
-            destruct (eq_typ_dec T1 S).
-              subst. left; eauto.
-              right.
-                intros [S' J'].
-                inversion J'; subst.
-                assert (T3 = S); eauto using typing_unique.
-                assert (typ_arrow T1 T2 = typ_arrow T3 S'); eauto using typing_unique.
-                inversion H1; subst; eauto using typing_unique.
-      SSCase "argument not typeable".
-        right. intros [S' J']. inversion J'; subst; eauto.
-    SCase "function not typeable".
-      right. intros [S' J']. inversion J'; subst; eauto.
-Qed.
-*)
-(*************************************************************)
-
-
-(*
-
-Lemma bigstep_lc1 : forall x y, bigstep x y -> lc_exp x.
-Proof. induction 1; auto. Qed.
-Lemma bigstep_lc2 : forall x y, bigstep x y -> lc_exp y.
-Proof. induction 1; auto. Qed.
-
-Inductive multistep : exp -> exp -> Prop :=
-| ms_refl : forall e, lc_exp e -> multistep e e
-| ms_step : forall e1 e2 e3, step e1 e2 -> multistep e2 e3 -> multistep e1 e3.
-Hint Constructors multistep.
-
-Lemma ms_trans : forall e2 e1 e3,
-    multistep e1 e2 -> multistep e2 e3 -> multistep e1 e3.
-Proof. induction 1; intros; eauto. Qed.
-
-Lemma multistep_lc1 : forall x y, multistep x y -> lc_exp x.
-Proof. intros. induction H; eauto using step_lc_exp1. Qed.
-Lemma multistep_lc2 : forall x y, multistep x y -> lc_exp y.
-Proof. intros. induction H; eauto using step_lc_exp2. Qed.
-
-Lemma app_cong1 : forall e1 e1' e2,
-    lc_exp e2 ->
-    multistep e1 e1' -> multistep (app e1 e2) (app e1' e2).
-Proof. induction 2.
-  - eapply ms_refl. eauto.
-  - eapply ms_step. eauto. eauto.
-Qed.
-
-Lemma app_cong2 : forall e1 e2 e2',
-    lc_exp e1 ->
-    is_value e1 ->
-    multistep e2 e2' -> multistep (app e1 e2) (app e1 e2').
-Proof. induction 3.
-  - eapply ms_refl; eauto.
-  - eapply ms_step; eauto.
-Qed.
-
-Lemma bigstep_smallstep : forall e v, bigstep e v -> multistep e v.
-Proof.
-  induction 1.
-  apply (@ms_trans (app (abs T1 e1') e2)).
-  eapply app_cong1; eauto using bigstep_lc1, bigstep_lc2.
-  apply (@ms_trans (app (abs T1 e1') v1)).
-  eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
-  apply (@ms_trans (open_exp_wrt_exp e1' v1)).
-  eapply ms_step.
-  apply step_beta;
-  eauto using bigstep_lc1, bigstep_lc2.
-  eapply ms_refl; eauto using bigstep_lc1.
-  auto.
-  eapply ms_refl; auto.
-Qed.
-
-Lemma smallstep_bigstep2 : forall e e', step e e' -> forall v, bigstep e' v -> bigstep e v.
-Proof.
-  induction 1; intros.
-  - eapply bs_app; eauto.
-    eapply bs_val; simpl; eauto.
-  - inversion H1; simpl in *; try contradiction; subst.
-    eapply bs_app; simpl; eauto.
-  - inversion H2; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-Qed.
-
-
-Lemma smallstep_bigstep : forall e v, multistep e v -> is_value v -> bigstep e v.
-Proof.
-  induction 1; intros.
-  - destruct e; simpl in *; auto; try contradiction.
-  - eapply smallstep_bigstep2; eauto.
-Qed.
-*)
 
 (***********************************************************)
 

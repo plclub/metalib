@@ -1,11 +1,13 @@
 RULESFILE = stlc-rules.tex
 
+GENCOQ = Stlc.v Stlc_inf.v Lec1_short.v Lec1_sol.v Lec1_full.v  Lec2_short.v Lec2_sol.v Lec2_full.v
+
 all:talk.pdf
 
 clean: Stlc.mk
 	make -f Stlc.mk clean
 
-coq: Stlc.mk
+coq: $(GENCOQ) Stlc.mk
 	make -f Stlc.mk
 
 Stlc.mk:
@@ -49,3 +51,15 @@ METALIB.FIX_%:
 
 paperclean:
 	rm -if *-rules.tex $(TOP).tex *.log ./*~ *.aux $(PDFS) *.bbl *.blg *.fdb_latexmk *.fls *.out
+
+coqsplit: coqsplit.ml
+	ocamlc.opt coqsplit.ml -o coqsplit
+
+%_full.v: %.v coqsplit
+	./coqsplit < $< > $@
+
+%_short.v: %.v coqsplit
+	./coqsplit -terse < $< > $@
+
+%_sol.v: %.v coqsplit
+	./coqsplit -solutions < $< > $@

@@ -23,7 +23,7 @@
 (*************************************************************************)
 
 
-(** First, we import a number of definitions from the Metatheory library (see
+(* First, we import a number of definitions from the Metatheory library (see
     Metatheory.v).  The following command makes those definitions available in
     the rest of this file.
 
@@ -32,20 +32,26 @@
     files.
 
 *)
-
 Require Import Metalib.Metatheory.
 
-(** Next, we import the definitions of the simply-typed lambda calculus. *)
+(* Next, we import the definitions of the simply-typed lambda calculus.
+   If you haven't read this file yet, you should do so now. *)
 Require Import Stlc.Definitions.
 
-(** And some notations *)
+(* And some notations (defined in Stlc.Definitions), but not automatically
+   brought into scope. *)
 Import StlcNotations.
 
+(* Some sample variable names to play with *)
+Parameter X : var.
+Parameter Y : var.
+Parameter Z : var.
 
 (*************************************************************************)
 (** * Encoding terms in STLC *)
 (*************************************************************************)
 
+(* FULL *)
 (*
   We start with examples of encodings in STLC.
 
@@ -53,43 +59,40 @@ Import StlcNotations.
   Because "Y" is free variable in this term, we need to assume an
   atom for this name.
 *)
-
-Parameter Y : var.
 Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
 
 (**
-    Below is another example: the encoding of (\x:b. \y:b. (y x)).
+    Below is another example: the encoding of (\x. \y. (y x)).
 *)
 
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
-
+(* /FULL *)
 
 (** Exercise: Uncomment and then complete the definitions of the following
 	 lambda calculus terms using the locally nameless representation.
 
-       "two"     :    \s:b->b. \z:b. s (s z)
+       "two"     :    \s. \z. s (s z)
 
-       "COMB_K"  :    \x:b. \y:b. x
+       "COMB_K"  :    \x. \y. x
 
-       "COMB_S"  :    \x:b -> b -> b.\y:b -> b.\z:b. x z (y z)
+       "COMB_S"  :    \x. \y. \z. x z (y z)
 
 *)
 
-
-Definition two :=
-  (* SOLUTION *)
-  abs (abs (app (var_b 1) (app (var_b 1) (var_b 0)))).
+(* SOLUTION *)
+Definition two
+  := abs (abs (app (var_b 1) (app (var_b 1) (var_b 0)))).
 
 Definition COMB_K :=
-  (* SOLUTION *)
 	abs (abs (var_b 1)).
 
 Definition COMB_S :=
-   (* SOLUTION *)
    abs (abs (abs
         (app (app (var_b 2) (var_b 0)) (app (var_b 1) (var_b 0))))).
 
-(* SCW: move to talk slides *)
+(* /SOLUTION *)
+
+(* FULL *)
 (** There are two important advantages of the locally nameless
     representation:
      - Alpha-equivalent terms have a unique representation.
@@ -107,21 +110,22 @@ Definition COMB_S :=
        substitution and reason about how these operations
        interact with each other.
 *)
-
+(* /FULL *)
 
 (*************************************************************************)
 (** * Substitution *)
 (*************************************************************************)
 
+(* FULL *)
 (** The substitution function replaces a free variable with a term.  For
     simplicity, we define a notation for free variable substitution that
     mimics standard mathematical notation.  *)
 
+Check [Y ~> var_f Z](abs (app (var_b 0)(var_f Y))).
+
 (** To demonstrate how free variable substitution works, we need to
     reason about var equality.
 *)
-
-Parameter Z : var.
 Check (Y == Z).
 
 (** The decidable var equality function returns a sum. If the two
@@ -138,26 +142,31 @@ Check (Y == Z).
       It takes any string as its argument, and puts that string in
       the hypothesis list until the case is finished.
 *)
+(* /FULL *)
 
 Lemma demo_subst1:
   [Y ~> var_f Z] (abs (app (var_b 0) (var_f Y))) = (abs (app (var_b 0) (var_f Z))).
 Proof.
+(* WORKINCLASS *)
   simpl.
   destruct (Y==Y).
   - Case "left".
     auto.
   - Case "right".
     destruct n. auto.
-Qed.
+Qed. (* /WORKINCLASS *)
 
-(** Take-home Exercise: We can use almost the same proof script as
-    above to state how substitution works in the variable case. Try it
+
+(** Exercise [subst_eq_var]
+
+    We can use almost the same proof script as
+    above to show how substitution works in the variable case. Try it
     on your own.  *)
 
 Lemma subst_eq_var: forall (x : var) u,
   [x ~> u](var_f x) = u.
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros x u.
   simpl.
   destruct (x == x).
@@ -165,12 +174,14 @@ Proof.
     auto.
   - Case "right".
     destruct n. auto.
-Qed.
+Qed. (* /ADMITTED *)
+
+(** Exercise [subst_neq_var] *)
 
 Lemma subst_neq_var : forall (x y : var) u,
   y <> x -> [x ~> u](var_f y) = var_f y.
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros x y u.
   simpl.
   intro Neq.
@@ -179,16 +190,19 @@ Proof.
     destruct Neq. auto.
   - Case "right".
     auto.
-Qed.
+Qed. (* /ADMITTED *)
+
+(** Exercise [subst_same] *)
 
 Lemma subst_same : forall y e, [y ~> var_f y] e = e.
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   induction e; simpl; intros; eauto.
   destruct (x == y); subst; eauto.
   rewrite IHe. auto.
   rewrite IHe1. rewrite IHe2. auto.
-Qed.
+Qed. (* /ADMITTED *)
+
 
 (*************************************************************************)
 (** * Free variables and variable sets *)
@@ -212,10 +226,11 @@ Proof.
   fsetdec.
 Qed.
 
-(** Exercise [subst_exp_fresh_eq] To show the ease of reasoning with these
-    definitions, we will prove a standard result from lambda calculus: if a
-    variable does not appear free in a term, then substituting for it has no
-    effect.
+(** Exercise [subst_exp_fresh_eq]
+
+    To show the ease of reasoning with these definitions, we will prove a
+    standard result from lambda calculus: if a variable does not appear free
+    in a term, then substituting for it has no effect.
 
     HINTS: Prove this lemma by induction on [e].
 
@@ -228,13 +243,12 @@ Qed.
 
     - The [f_equal] tactic converts a goal of the form [f e1 = f e1'] in to
       one of the form [e1 = e1'], and similarly for [f e1 e2 = f e1' e2'],
-      etc.
-*)
+      etc.  *)
 
 Lemma subst_exp_fresh_eq : forall (x : var) e u,
   x `notin` fv_exp e -> [x ~> u] e = e.
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros x e u H.
   induction e.
   - Case "var_b".
@@ -255,10 +269,10 @@ Proof.
     f_equal.
     auto.
     auto.
-Qed.
+Qed. (* /ADMITTED *)
 
 (*************************************************************************)
-(* Exercises                                                             *)
+(* More Exercises                                                        *)
 (*************************************************************************)
 
 (*
@@ -301,25 +315,29 @@ Qed.
 
 (* Now prove the following properties of substitution and fv *)
 
+(** Exercise [subst_exp_fresh_same] *)
+
 Lemma subst_exp_fresh_same :
 forall u e x,
   x `notin` fv_exp e ->
   x `notin` fv_exp ([x ~> u] e).
 Proof.
- (* SOLUTION *)
+ (* ADMITTED *)
   intros.
   induction e; simpl in *; auto.
   - destruct (x0 == x).
     ++ subst. fsetdec.
     ++ simpl. auto.
-Qed.
+Qed. (* /ADMITTED *)
+
+(** Exercise [fv_exp_subst_exp_fresh] *)
 
 Lemma fv_exp_subst_exp_fresh :
 forall e u x,
   x `notin` fv_exp e ->
   fv_exp ([x ~> u] e) [=] fv_exp e.
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros.
   induction e; simpl in *; auto.
   - fsetdec.
@@ -331,17 +349,19 @@ Proof.
     fsetdec.
     fsetdec.
     fsetdec.
-Qed.
+Qed. (* /ADMITTED *)
+
+(** Exercise [fv_exp_subst_exp_upper] *)
 
 Lemma fv_exp_subst_exp_upper :
 forall e1 e2 x1,
   fv_exp (subst_exp e2 x1 e1) [<=] fv_exp e2 `union` remove x1 (fv_exp e1).
 Proof.
-  (* SOLUTION *)
+  (* ADMITTED *)
   intros. induction e1; simpl in *.
   - fsetdec.
   - destruct (x == x1); simpl; fsetdec.
   - rewrite IHe1. fsetdec.
   - rewrite IHe1_1. rewrite IHe1_2.
     fsetdec.
-Qed.
+Qed. (* /ADMITTED *)
