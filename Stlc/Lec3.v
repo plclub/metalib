@@ -12,6 +12,8 @@ Require Import Stlc.Definitions.
 (** And some auxiliary lemmas about these definitions. *)
 Require Import Stlc.Lemmas.
 
+Import StlcNotations.
+
 (* This file draws heavily on the generated lemmas in Stlc.Lemmas. *)
 
 (*************************************************************)
@@ -23,15 +25,15 @@ Require Import Stlc.Lemmas.
 
 Inductive n_exp : Set :=
  | n_var (x:var)
- | n_abs (x:var) (T:typ) (e:n_exp)
+ | n_abs (x:var) (e:n_exp)
  | n_app (e1:n_exp) (e2:n_exp).
 
 Parameter X : var.
 Parameter Y : var.
 Parameter neqXY : X <> Y.
 
-Definition example_X : n_exp := n_abs X typ_base (n_var X).
-Definition example_Y : n_exp := n_abs Y typ_base (n_var Y).
+Definition example_X : n_exp := n_abs X (n_var X).
+Definition example_Y : n_exp := n_abs Y (n_var Y).
 
 Lemma names_matter : example_X <> example_Y.
 Proof.
@@ -47,17 +49,19 @@ Qed.
 
 *)
 
-Inductive nom_val : Set :=
-  | nom_closure : atom -> typ -> nom_env -> n_exp -> nom_val
 
-with nom_env : Set :=
+Inductive nom_env : Set :=
   | nom_nil  : nom_env
-  | nom_cons : atom -> nom_val -> nom_env -> nom_env.
+  | nom_cons : atom -> n_exp -> nom_env -> nom_env -> nom_env.
 
-Fixpoint rho_lookup x rho : option nom_val :=
+Inductive nom_val : Set :=
+  | nom_closure : atom -> nom_env -> n_exp -> nom_val.
+
+
+Fixpoint rho_lookup x rho : option (n_exp * nom_env) :=
   match rho with
   | nom_nil => None
-  | nom_cons y v rho' =>  if (x == y) then Some v else rho_lookup x rho'
+  | nom_cons y e r rho' =>  if (x == y) then Some (e,r) else rho_lookup x rho'
   end.
 
 Inductive res (a : Set) : Set :=
@@ -71,20 +75,16 @@ Fixpoint nom_interp (n:nat) (e:n_exp) (rho: nom_env) : res nom_val :=
   | S m =>
     match e with
     | n_var x =>  match (rho_lookup x rho) with
-                | Some v => val _ v
+                | Some (e',r') => nom_interp m e' r'
                 | None   => stuck _
                 end
     | n_app e1 e2 =>
       match nom_interp m e1 rho with
-      | val _ (nom_closure x T rho' e1') =>
-            match nom_interp m e2 rho with
-            | val _ v1 =>
-              nom_interp m e1' (nom_cons x v1 rho')
-            | r => r
-            end
+      | val _ (nom_closure x rho' e1') =>
+              nom_interp m e1' (nom_cons x e2 rho rho')
       | r       => r
       end
-    | n_abs x T e   => val _ (nom_closure x T rho e)
+    | n_abs x e   => val _ (nom_closure x rho e)
     end
   end.
 
@@ -111,25 +111,27 @@ Fixpoint nom_to_exp (ne : n_exp) : exp :=
   match ne with
   | n_var x => var_f x
   | n_app e1 e2 => app (nom_to_exp e1) (nom_to_exp e2)
-  | n_abs x T e1 => abs T (close_exp_wrt_exp x (nom_to_exp e1))
+  | n_abs x e1 => abs (close_exp_wrt_exp x (nom_to_exp e1))
 end.
 
-(* We must define the translation of values simultaneously with a substitution
-   function for environments. This function substitutes all of the mappings in
+(* The following function for environments substitutes all of the mappings in
    the environment in a LN expression, using the LN substitution function.
    This is good because we don't need to define capture-avoiding substitution for
    nominal terms.
  *)
 
-Fixpoint nom_val_to_exp (cv:nom_val) : exp :=
-  match cv with
-  | nom_closure x T rho e =>
-    nom_envsubst rho (nom_to_exp (n_abs x T e))
-  end
-with nom_envsubst (ne:nom_env) : exp -> exp :=
+Fixpoint nom_envsubst (ne:nom_env) : exp -> exp :=
   match ne with
   | nom_nil => fun e => e
-  | nom_cons x v rho => fun e => nom_envsubst rho ([ x ~> nom_val_to_exp v] e)
+  | nom_cons x e' r' rho =>
+    fun e => nom_envsubst rho ([ x ~> nom_envsubst r' (nom_to_exp e')] e)
+  end.
+
+
+Fixpoint nom_val_to_exp (cv:nom_val) : exp :=
+  match cv with
+  | nom_closure x rho e =>
+    nom_envsubst rho (nom_to_exp (n_abs x e))
   end.
 
 
@@ -158,35 +160,37 @@ with nom_envsubst (ne:nom_env) : exp -> exp :=
 Fixpoint dom_rho (rho :nom_env) :=
   match rho with
   | nom_nil => {}
-  | nom_cons x v rho => {{x}} \u dom_rho rho
+  | nom_cons x _ _ rho => {{x}} \u dom_rho rho
   end.
 
+Inductive closed_env : nom_env -> Prop :=
+     | closed_nil : closed_env nom_nil
+     | closed_cons : forall x e r rho,
+         closed_env r ->
+         fv_exp (nom_to_exp e) [<=] dom_rho r ->
+         closed_env rho -> closed_env (nom_cons x e r rho).
 
 Inductive closed_val : nom_val -> Prop :=
-  | closed_closure : forall x T rho e,
+  | closed_closure : forall x rho e,
       closed_env rho ->
       fv_exp (nom_to_exp e) [<=] add x (dom_rho rho) ->
-      closed_val (nom_closure x T rho e)
-with closed_env : nom_env -> Prop :=
-     | closed_nil : closed_env nom_nil
-     | closed_cons : forall x v rho,
-         closed_val v -> closed_env rho -> closed_env (nom_cons x v rho).
+      closed_val (nom_closure x rho e).
 Hint Constructors closed_env closed_val.
 
 (* Our definition of closed_env means that any value that we lookup
    from this environment will be closed. *)
 
-Lemma rho_lookup_closed_val : forall x rho v,
+Lemma rho_lookup_closed_val : forall x rho e r,
     closed_env rho ->
-    Some v = rho_lookup x rho ->
-    closed_val v.
+    Some (e,r) = rho_lookup x rho ->
+    fv_exp (nom_to_exp e) [<=] dom_rho r.
 Proof.
   induction rho; intros; simpl in *.
   - inversion H0.
   - inversion H. subst.
     destruct (x == a).
     inversion H0. eauto.
-    eapply IHrho; eauto.
+    eapply IHrho2; eauto.
 Qed.
 
 (* Furthermore, we can also prove that closed values have no
@@ -196,6 +200,86 @@ Qed.
    derivation. So before we can do that, we need to ask Coq to
    derive the appropriate induction scheme.
 *)
+
+Lemma fv_closed_env :
+  (forall rho, closed_env rho -> forall e, fv_exp e [<=] dom_rho rho ->
+                                fv_exp (nom_envsubst rho e) [=] {}).
+Proof.
+  induction rho; intros; simpl in *.
+  + fsetdec.
+  + inversion H.
+    eapply IHrho2; auto.
+    rewrite fv_exp_subst_exp_upper.
+    rewrite IHrho1; auto.
+    fsetdec.
+Qed.
+
+(* ----------------- nom_envsubst reductions ------------------- *)
+
+(* We can think of a an environment as a multi-substitution for locally
+   nameless terms.
+
+   Therefore, the nom_envsubst function inherits many of the properties of the
+   subst_exp function.
+
+ *)
+
+Lemma nom_envsubst_open : forall rho e e',
+ (forall v, lc_exp (nom_val_to_exp v)) ->
+ (nom_envsubst rho (open e e')) = (open (nom_envsubst rho e) (nom_envsubst rho e')).
+Proof.
+  induction rho; intros; simpl. auto.
+  rewrite subst_exp_open_exp_wrt_exp; eauto.
+Qed.
+
+
+Lemma nom_envsubst_var : forall x rho v,
+    closed_env rho ->
+    Some v = rho_lookup x rho ->
+    nom_envsubst rho (var_f x) = nom_val_to_exp v.
+Proof.
+  induction rho.
+  - intros. simpl in *. inversion H0.
+  - intros. simpl in *.
+     inversion H. subst.
+     destruct (x == a).
+     + inversion H0. subst. clear H0.
+    simpl.
+    rewrite nom_envsubst_fresh_eq; auto.
+  + eapply IHrho; auto.
+Qed.
+
+Lemma nom_envsubst_abs : forall rho T e,
+ nom_envsubst rho (abs e) = abs (nom_envsubst rho e).
+Proof.
+  induction rho; simpl; eauto.
+Qed.
+
+Lemma nom_envsubst_app : forall rho e1 e2,
+ nom_envsubst rho (app e1 e2) = app (nom_envsubst rho e1) (nom_envsubst rho e2).
+Proof.
+  induction rho; simpl; eauto.
+Qed.
+
+(* ----------------------------------------- *)
+
+Lemma fv_closed :
+  (forall v, closed_val v -> fv_exp (nom_val_to_exp v) [=] {}).
+Proof.
+  intros v CV. inversion CV.
+  simpl.
+  rewrite envsubst_abs.
+  rewrite H0.
+
+Lemma nom_envsubst_fresh_eq : forall rho v,
+    closed_val v ->
+    nom_envsubst rho (nom_val_to_exp v) = nom_val_to_exp v.
+Proof.
+  induction rho. simpl. auto.
+  intros. simpl.
+  rewrite subst_exp_fresh_eq; auto.
+  rewrite fv_closed; auto.
+Qed.
 
 
 Scheme closed_val_ind' := Induction for closed_val Sort Prop
@@ -275,63 +359,6 @@ Proof.
     fsetdec.
 Qed.
 
-(* ----------------- nom_envsubst reductions ------------------- *)
-
-(* We can think of a an environment as a multi-substitution for locally
-   nameless terms.
-
-   Therefore, the nom_envsubst function inherits many of the properties of the
-   subst_exp function.
-
- *)
-
-
-Lemma nom_envsubst_fresh_eq : forall rho v,
-    closed_val v ->
-    nom_envsubst rho (nom_val_to_exp v) = nom_val_to_exp v.
-Proof.
-  induction rho. simpl. auto.
-  intros. simpl.
-  rewrite subst_exp_fresh_eq; auto.
-  rewrite fv_closed; auto.
-Qed.
-
-Lemma nom_envsubst_open : forall rho e e',
- (forall v, lc_exp (nom_val_to_exp v)) ->
- (nom_envsubst rho (open e e')) = (open (nom_envsubst rho e) (nom_envsubst rho e')).
-Proof.
-  induction rho; intros; simpl. auto.
-  rewrite subst_exp_open_exp_wrt_exp; eauto.
-Qed.
-
-
-Lemma nom_envsubst_var : forall x rho v,
-    closed_env rho ->
-    Some v = rho_lookup x rho ->
-    nom_envsubst rho (var_f x) = nom_val_to_exp v.
-Proof.
-  induction rho.
-  - intros. simpl in *. inversion H0.
-  - intros. simpl in *.
-     inversion H. subst.
-     destruct (x == a).
-     + inversion H0. subst. clear H0.
-    simpl.
-    rewrite nom_envsubst_fresh_eq; auto.
-  + eapply IHrho; auto.
-Qed.
-
-Lemma nom_envsubst_abs : forall rho T e,
- nom_envsubst rho (abs T e) = abs T (nom_envsubst rho e).
-Proof.
-  induction rho; simpl; eauto.
-Qed.
-
-Lemma nom_envsubst_app : forall rho e1 e2,
- nom_envsubst rho (app e1 e2) = app (nom_envsubst rho e1) (nom_envsubst rho e2).
-Proof.
-  induction rho; simpl; eauto.
-Qed.
 
 
 (* ----------------- interpreter soundness for values ------------------- *)
@@ -425,8 +452,8 @@ Proof.
     erewrite nom_envsubst_var; eauto.
   - Case "abs".
     inversion H.
-    replace (nom_envsubst rho (abs T (close_exp_wrt_exp x (nom_to_exp e)))) with
-            (nom_val_to_exp (nom_closure x T rho e)); auto.
+    replace (nom_envsubst rho (abs (close_exp_wrt_exp x (nom_to_exp e)))) with
+            (nom_val_to_exp (nom_closure x rho e)); auto.
   - Case "app".
     remember (nom_interp n e1 rho) as r1.
     remember (nom_interp n e2 rho) as r2.
@@ -447,8 +474,8 @@ Proof.
     rewrite subst_exp_spec in H.
     rewrite nom_envsubst_open in H; eauto.
 
-    replace (nom_envsubst rho1 (abs T0 (close_exp_wrt_exp x0 (nom_to_exp e0)))) with
-            (nom_val_to_exp (nom_closure x0 T0 rho1 e0)) in H; auto.
+    replace (nom_envsubst rho1 (abs (close_exp_wrt_exp x0 (nom_to_exp e0)))) with
+            (nom_val_to_exp (nom_closure x0 rho1 e0)) in H; auto.
 
     rewrite nom_envsubst_fresh_eq in H; eauto.
 

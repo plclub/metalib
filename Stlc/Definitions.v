@@ -22,7 +22,7 @@ Inductive typ : Set :=  (*r types *)
 Inductive exp : Set :=  (*r expressions *)
  | var_b (_:nat)
  | var_f (x:var)
- | abs (T:typ) (e:exp)
+ | abs (e:exp)
  | app (e1:exp) (e2:exp).
 
 
@@ -53,7 +53,7 @@ Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
   match e with
   | (var_b n) => var_b n
   | (var_f x) => (if eq_var x y then u else (var_f x))
-  | (abs T e1) => abs T (subst_exp u y e1)
+  | (abs e1) => abs (subst_exp u y e1)
   | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
 end.
 
@@ -73,7 +73,7 @@ Fixpoint fv_exp (e_5:exp) : vars :=
   match e_5 with
   | (var_b nat) => {}
   | (var_f x) => {{x}}
-  | (abs T e) => (fv_exp e)
+  | (abs e) => (fv_exp e)
   | (app e1 e2) => (fv_exp e1) \u (fv_exp e2)
 end.
 
@@ -122,11 +122,22 @@ Fixpoint open_exp_wrt_exp_rec (k:nat) (u:exp) (e:exp) {struct e}: exp :=
         | inright _ => var_b (n - 1)
       end
   | (var_f x) => var_f x
-  | (abs T e) => abs T (open_exp_wrt_exp_rec (S k) u e)
+  | (abs e) => abs (open_exp_wrt_exp_rec (S k) u e)
   | (app e1 e2) => app (open_exp_wrt_exp_rec k u e1) (open_exp_wrt_exp_rec k u e2)
 end.
 
 Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
+
+(*************************************************************************)
+(** * Notations *)
+(*************************************************************************)
+
+
+Module StlcNotations.
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
+End StlcNotations.
+
 
 (*************************************************************************)
 (** * Local closure *)
@@ -147,9 +158,9 @@ Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
 Inductive lc_exp : exp -> Prop :=    (* defn lc_exp *)
  | lc_var_f : forall (x:var),
      (lc_exp (var_f x))
- | lc_abs : forall (T:typ) (e:exp),
+ | lc_abs : forall (e:exp),
       ( forall x , lc_exp  (open_exp_wrt_exp e (var_f x) )  )  ->
-     (lc_exp (abs T e))
+     (lc_exp (abs e))
  | lc_app : forall (e1 e2:exp),
      (lc_exp e1) ->
      (lc_exp e2) ->
@@ -206,7 +217,7 @@ Inductive typing : ctx -> exp -> typ -> Prop :=
      typing G (var_f x) T
  | typing_abs : forall (L:vars) (G:ctx) (T1:typ) (e:exp) (T2:typ),
      (forall x , x \notin L -> typing ((x ~ T1) ++ G) (open_exp_wrt_exp e (var_f x)) T2)  ->
-     typing G (abs T1 e) (typ_arrow T1 T2)
+     typing G (abs e) (typ_arrow T1 T2)
  | typing_app : forall (G:ctx) (e1 e2:exp) (T2 T1:typ),
      typing G e1 (typ_arrow T1 T2) ->
      typing G e2 T1 ->
@@ -224,80 +235,22 @@ Inductive typing : ctx -> exp -> typ -> Prop :=
     Note the hypotheses which ensure that the relations hold only for locally
     closed terms.  *)
 
-Definition is_value (e_5:exp) : Prop :=
-  match e_5 with
-  | (var_b n) => False
-  | (var_f x) => True
-  | (abs T e) => (True)
-  | (app e1 e2) => False
-end.
+Definition is_value (e : exp) : Prop :=
+  match e with
+  | abs _   => True
+  | _       => False
+  end.
 
-
-
-(* defns JStep *)
+(* defns JEval *)
 Inductive step : exp -> exp -> Prop :=    (* defn step *)
- | step_beta : forall (T1:typ) (e1 v:exp),
-     is_value v ->
-     lc_exp (abs T1 e1) ->
+ | step_beta : forall (e1 v:exp),
+     lc_exp (abs e1) ->
      lc_exp v ->
-     step (app  ( (abs T1 e1) )  v)  (open_exp_wrt_exp  e1 v )
- | step_app1 : forall (e1 e2 e1':exp),
+     step (app  ( (abs e1) )  v)  (open_exp_wrt_exp  e1 v )
+ | step_app : forall (e1 e2 e1':exp),
      lc_exp e2 ->
      step e1 e1' ->
-     step (app e1 e2) (app e1' e2)
- | step_app2 : forall (e2 v e2':exp),
-     is_value v ->
-     lc_exp v ->
-     step e2 e2' ->
-     step (app v e2) (app v e2').
+     step (app e1 e2) (app e1' e2).
+
 
 Hint Constructors typing step lc_exp.
-
-(*************************************************************************)
-(** * Big-step Evaluation *)
-(*************************************************************************)
-
-Inductive bigstep : exp -> exp -> Prop :=    (* defn bigstep *)
- | bs_app : forall (e1 v2:exp) (T1:typ) (e1' e2 v1:exp),
-     is_value v1 ->
-     bigstep e1 (abs T1 e1') ->
-     bigstep e2 v1 ->
-     bigstep  (open_exp_wrt_exp  e1' v1 )  v2 ->
-     bigstep (app e1 e2) v2
-| bs_val : forall (v:exp),
-     is_value v ->
-     lc_exp v ->
-     bigstep v v.
-Hint Constructors bigstep.
-
-(*************************************************************)
-
-
-Inductive eq : ctx -> exp -> exp -> typ -> Prop :=    (* defn eq *)
- | eq_refl : forall (G:ctx) (e:exp) (T:typ),
-     typing G e T ->
-     eq G e e T
- | eq_sym : forall (G:ctx) (e2 e1:exp) (T:typ),
-     eq G e1 e2 T ->
-     eq G e2 e1 T
- | eq_trans : forall (G:ctx) (e1 e3:exp) (T:typ) (e2:exp),
-     eq G e1 e2 T ->
-     eq G e2 e3 T ->
-     eq G e1 e3 T
- | eq_beta : forall (G:ctx) (T1:typ) (e v:exp) (T2:typ),
-     is_value v ->
-     typing G (app  ( (abs T1 e) )  v) T2 ->
-     eq G (app  ( (abs T1 e) )  v)  (open_exp_wrt_exp  e v )  T2
- | eq_abs_cong : forall (L:vars) (G:ctx) (T1:typ) (e1 e2:exp) (T2:typ),
-      ( forall x , x \notin  L  -> eq  (( x ~ T1 )++ G )   ( open_exp_wrt_exp e1 (var_f x) )   ( open_exp_wrt_exp e2 (var_f x) )  T2 )  ->
-     eq G (abs T1 e1) (abs T1 e2) (typ_arrow T1 T2)
- | eq_app_cong : forall (G:ctx) (e1 e1' e2 e2':exp) (T2 T1:typ),
-     eq G e1 e1' (typ_arrow T1 T2) ->
-     eq G e2 e2' T1 ->
-     eq G (app e1 e1') (app e2 e2') T2.
-Hint Constructors eq.
-
-(*************************************************************)
-
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
-Definition open e u := open_exp_wrt_exp_rec 0 u e.

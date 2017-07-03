@@ -24,10 +24,10 @@ typ, T :: 'typ_' ::= {{ com types }}
   | T1 -> T2    ::   :: arrow
 
 exp, e, v :: ''     ::= {{ com expressions }}
+  | x              ::   :: var
   | \ x . e        ::   :: abs
     (+ bind x in e +)
 	 {{ tex [[\]][[x]].[[e]] }}
-  | x              ::   :: var
   | e1 e2          ::   :: app
   | e1 [ x ~> e2 ] :: M :: subst
      {{ coq (open_exp_wrt_exp [[x e1]][[e2]]) }}
@@ -86,12 +86,13 @@ embed
 Definition is_value (e : exp) : Prop :=
   match e with
   | abs _   => True
-  | var_f _ => True
   | _       => False
   end.
 
+Module StlcNotations.
 Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
-Notation "e1 ^ x"       := (open_exp_wrt_exp e1 (var_f x)).
+Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
+End StlcNotations.
 }}
 
 defns
@@ -126,18 +127,12 @@ defn
 e --> e' ::   :: step :: 'step_'
 by
 
-% is_value v
 ------------------------------- :: beta
 (\x.e1) v --> e1 [x ~> v]
 
 e1 --> e1'
------------------ :: app1
+----------------- :: app
 e1 e2 --> e1' e2
-
-% e2 --> e2'
-% is_value v
-% ----------------- :: app2
-% v e2 --> v e2'
 
 defns
 
@@ -177,9 +172,8 @@ e2 = e3
 --------- :: trans
 e1 = e3
 
-is_value v
 --------------------- :: beta
-(\x.e) v = e [x ~> v]
+(\x.e) e1 = e [x ~> e1]
 
 
 e1 = e2

@@ -8,6 +8,8 @@ Require Import Metalib.Metatheory.
 
 Require Import Stlc.Definitions.
 
+Import StlcNotations.
+
 Require Import Stlc.Lemmas.
 
 Require Import Stlc.Lec1.
@@ -43,8 +45,8 @@ Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
 *)
 
 Lemma demo_open :
-  (app (abs typ_base (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
-  (app (abs typ_base (app (var_f Y) (var_b 0))) (var_f Y)).
+  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
+  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
 Proof.
   unfold open_exp_wrt_exp.
   unfold open_exp_wrt_exp_rec.
@@ -63,8 +65,8 @@ Ltac simpl_open :=
   fold open_exp_wrt_exp_rec; fold open_exp_wrt_exp.
 
 Lemma demo_open_revised :
-  (app (abs typ_base (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
-  (app (abs typ_base (app (var_f Y) (var_b 0))) (var_f Y)).
+  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
+  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
 Proof.
   (* SOLUTION *)
   simpl_open.
@@ -83,7 +85,7 @@ Qed.
 *)
 
 Lemma demo_lc :
-  lc_exp (app (abs typ_base (app (var_f Y) (var_b 0))) (var_f Y)).
+  lc_exp (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
 Proof.
   eapply lc_app.
     eapply lc_abs.
@@ -107,7 +109,7 @@ forall e3 e1 e2 x1,
 Proof.
 Admitted.
 
-(** *** Exercise [subst_exp_open_exp_wrt_exp_var] *)
+(** *** Exercise [subst_var] *)
 
 (** The lemma above is most often used with [e2] as some fresh
     variable. Therefore, it simplifies matters to define the following useful
@@ -118,7 +120,7 @@ Admitted.
 
 *)
 
-Lemma subst_exp_open_exp_wrt_exp_var : forall (x y : var) u e,
+Lemma subst_var : forall (x y : var) u e,
   y <> x ->
   lc_exp u ->
   ([x ~> u] e) ^ y = [x ~> u] (e ^ y).
@@ -190,12 +192,12 @@ Proof.
     simpl.
     eapply lc_abs.
     intros x0.
-    rewrite subst_exp_open_exp_wrt_exp_var.
+    rewrite subst_var.
     apply H0.
 Admitted.
 
 (** Here we are stuck. We don't know that [x0] is not equal to [x],
-    which is a preconduction for [subst_exp_open_exp_wrt_exp_var].
+    which is a preconduction for [subst_var].
 
     The solution is to prove an alternative introduction rule for
     local closure for abstractions.  In the current rule, we need
@@ -214,9 +216,9 @@ Admitted.
     The Lemmas file walks through the proof of this result; for
     convenience we repeat it below.
 *)
-Lemma lc_abs_exists : forall (x : var) e T,
+Lemma lc_abs_exists : forall (x : var) e,
       lc_exp (e ^ x) ->
-      lc_exp (abs T e).
+      lc_exp (abs e).
 Admitted.
 
 (* With this addition, we can complete the proof of subst_lc. *)
@@ -235,7 +237,7 @@ Proof.
     simpl.
     pick fresh x0 for {{x}}.  (* make sure that x0 <> x *)
     eapply (lc_abs_exists x0).
-    rewrite subst_exp_open_exp_wrt_exp_var; auto.
+    rewrite subst_var; auto.
   - Case "lc_app".
     default_simp.
 Qed.
@@ -439,7 +441,7 @@ Inductive typing_e : ctx -> exp -> typ -> Prop :=
   | typing_e_abs : forall x E e T1 T2,
       x `notin` dom E ->
       typing_e ((x ~ T1) ++ E) (e ^ x) T2 ->
-      typing_e E (abs T1 e) (typ_arrow T1 T2)
+      typing_e E (abs e) (typ_arrow T1 T2)
   | typing_e_app : forall E e1 e2 T1 T2,
       typing_e E e1 (typ_arrow T1 T2) ->
       typing_e E e2 T1 ->
@@ -576,7 +578,7 @@ Print typing_abs.
 | typing_abs :
     forall (L : atoms) (G : ctx) (T1 : typ) (e : exp) (T2 : typ),
     (forall x, x `notin` L -> typing ([(x, T1)] ++ G) (e ^ x) T2) ->
-    typing (abs T1 e) (typ_arrow T1 T2) >>
+    typing (abs e) (typ_arrow T1 T2) >>
 >>
 
    We call this "cofinite quantification". The advantage of this definition
@@ -799,7 +801,7 @@ Proof.
     subst.
     simpl.
     pick fresh y and apply typing_abs.
-    rewrite subst_exp_open_exp_wrt_exp_var.
+    rewrite subst_var.
     rewrite_env (((y ~ T1) ++ F) ++ E).
     apply H0.
       auto.
@@ -855,7 +857,7 @@ Lemma step_lc_exp2 : forall e1 e2, step e1 e2 -> lc_exp e2.
 Proof. induction 1; auto.
        - pick fresh x.
          rewrite (subst_exp_intro x).
-         inversion H0.
+         inversion H.
          default_simp.
          apply subst_exp_lc_exp; auto.
          fsetdec.
@@ -998,16 +1000,12 @@ Proof.
     right.
     destruct IHtyping1 as [V1 | [e1' Step1]]; auto.
       + SCase "e1 is a value".
-      destruct IHtyping2 as [V2 | [e2' Step2]]; auto.
-        SSCase "e2 is a value".
         destruct e1; inversion V1; subst.
-        inversion H. inversion H5.
+        inversion H.
         exists (open_exp_wrt_exp e1 e2); eauto using typing_to_lc_exp.
-        SSCase "e2 is not a value".
-          exists (app e1 e2'). eauto using typing_to_lc_exp.
       + SCase "e1 is not a value".
         exists (app e1' e2).
-        apply step_app1.
+        apply step_app.
           eapply typing_to_lc_exp; eauto.
           assumption.
 Qed.
@@ -1092,7 +1090,7 @@ Qed.
 Lemma typing_abs_exists : forall E e T1 T2 (x : atom),
       x `notin` fv_exp e ->
       typing ((x ~ T1) ++ E) (e ^ x) T2 ->
-      typing E (abs T1 e) (typ_arrow T1 T2).
+      typing E (abs e) (typ_arrow T1 T2).
 Proof.
   intros.
   apply typing_abs with (L := dom E \u fv_exp e).
@@ -1109,7 +1107,7 @@ Qed.
    renaming lemma. We show that determining whether a program type
    checks is decidable.
 *)
-
+(*
 (** Equality on types is decidable *)
 Lemma eq_typ_dec : forall (T T' : typ),
   { T = T' } + { T <> T' }.
@@ -1144,8 +1142,9 @@ Proof.
     assert (typ_arrow T1 T2 = typ_arrow T3 T') by auto.
     inversion H; eauto.
 Qed.
+*)
 
-
+(*
 (* A property P is decidable if we can show the proposition P \/ ~P. *)
 Definition decidable (P : Prop) := (P \/ ~ P).
 
@@ -1207,11 +1206,11 @@ Proof.
     SCase "function not typeable".
       right. intros [S' J']. inversion J'; subst; eauto.
 Qed.
-
+*)
 (*************************************************************)
 
 
-
+(*
 
 Lemma bigstep_lc1 : forall x y, bigstep x y -> lc_exp x.
 Proof. induction 1; auto. Qed.
@@ -1283,7 +1282,7 @@ Proof.
   - destruct e; simpl in *; auto; try contradiction.
   - eapply smallstep_bigstep2; eauto.
 Qed.
-
+*)
 
 (***********************************************************)
 

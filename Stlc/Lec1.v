@@ -38,6 +38,9 @@ Require Import Metalib.Metatheory.
 (** Next, we import the definitions of the simply-typed lambda calculus. *)
 Require Import Stlc.Definitions.
 
+(** And some notations *)
+Import StlcNotations.
+
 
 (*************************************************************************)
 (** * Encoding terms in STLC *)
@@ -46,19 +49,19 @@ Require Import Stlc.Definitions.
 (*
   We start with examples of encodings in STLC.
 
-  For example, we can encode the expression (\x:b. Y x) as below.
+  For example, we can encode the expression (\x. Y x) as below.
   Because "Y" is free variable in this term, we need to assume an
   atom for this name.
 *)
 
 Parameter Y : var.
-Definition demo_rep1 := abs typ_base (app (var_f Y) (var_b 0)).
+Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
 
 (**
     Below is another example: the encoding of (\x:b. \y:b. (y x)).
 *)
 
-Definition demo_rep2 := abs typ_base (abs typ_base (app (var_b 0) (var_b 1))).
+Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 
 
 (** Exercise: Uncomment and then complete the definitions of the following
@@ -75,19 +78,15 @@ Definition demo_rep2 := abs typ_base (abs typ_base (app (var_b 0) (var_b 1))).
 
 Definition two :=
   (* SOLUTION *)
-  abs (typ_arrow typ_base typ_base)
-                      (abs typ_base (app (var_b 1) (app (var_b 1) (var_b 0)))).
+  abs (abs (app (var_b 1) (app (var_b 1) (var_b 0)))).
 
 Definition COMB_K :=
   (* SOLUTION *)
-	abs typ_base
-    (abs typ_base (var_b 1)).
+	abs (abs (var_b 1)).
 
 Definition COMB_S :=
    (* SOLUTION *)
-   abs (typ_arrow typ_base (typ_arrow typ_base typ_base))
-    (abs (typ_arrow typ_base typ_base)
-      (abs (typ_base)
+   abs (abs (abs
         (app (app (var_b 2) (var_b 0)) (app (var_b 1) (var_b 0))))).
 
 (* SCW: move to talk slides *)
@@ -141,7 +140,7 @@ Check (Y == Z).
 *)
 
 Lemma demo_subst1:
-  [Y ~> var_f Z] (abs typ_base (app (var_b 0) (var_f Y))) = (abs typ_base (app (var_b 0) (var_f Z))).
+  [Y ~> var_f Z] (abs (app (var_b 0) (var_f Y))) = (abs (app (var_b 0) (var_f Z))).
 Proof.
   simpl.
   destruct (Y==Y).
@@ -346,94 +345,3 @@ Proof.
   - rewrite IHe1_1. rewrite IHe1_2.
     fsetdec.
 Qed.
-
-(*************************************************************************)
-(** * Connection between small-step and bigstep semantics (Part I)       *)
-(*************************************************************************)
-
-
-
-(*
-Lemma bigstep_lc1 : forall x y, bigstep x y -> lc_exp x.
-Proof. induction 1; auto. Qed.
-Lemma bigstep_lc2 : forall x y, bigstep x y -> lc_exp y.
-Proof. induction 1; auto. Qed.
-*)
-
-Inductive multistep : exp -> exp -> Prop :=
-| ms_refl : forall e, lc_exp e -> multistep e e
-| ms_step : forall e1 e2 e3, step e1 e2 -> multistep e2 e3 -> multistep e1 e3.
-Hint Constructors multistep.
-
-(*
-Lemma ms_trans : forall e2 e1 e3,
-    multistep e1 e2 -> multistep e2 e3 -> multistep e1 e3.
-Proof. induction 1; intros; eauto. Qed.
-
-Lemma app_cong1 : forall e1 e1' e2,
-    lc_exp e2 ->
-    multistep e1 e1' -> multistep (app e1 e2) (app e1' e2).
-Proof. induction 2.
-  - eapply ms_refl. eauto.
-  - eapply ms_step. eauto. eauto.
-Qed.
-
-Lemma app_cong2 : forall e1 e2 e2',
-    lc_exp e1 ->
-    is_value_of_exp e1 ->
-    multistep e2 e2' -> multistep (app e1 e2) (app e1 e2').
-Proof. induction 3.
-  - eapply ms_refl; eauto.
-  - eapply ms_step; eauto.
-Qed.
-
-Lemma bigstep_smallstep : forall e v, bigstep e v -> multistep e v.
-Proof.
-  induction 1.
-  apply (@ms_trans (app (abs T1 e1') e2)).
-  eapply app_cong1; eauto using bigstep_lc1, bigstep_lc2.
-  apply (@ms_trans (app (abs T1 e1') v1)).
-  eapply app_cong2; eauto using bigstep_lc1, bigstep_lc2. simpl; auto.
-  apply (@ms_trans (open_exp_wrt_exp e1' v1)).
-  eapply ms_step.
-  apply step_beta;
-  eauto using bigstep_lc1, bigstep_lc2.
-  eapply ms_refl; eauto using bigstep_lc1.
-  auto.
-  eapply ms_refl; auto.
-Qed.
-*)
-(*
-Lemma smallstep_bigstep1 : forall e e', step e e' -> forall v, bigstep e v -> bigstep e' v.
-Proof.
-  induction 1; intros.
-  - inversion H2; simpl in *; try contradiction. subst.
-    inversion H6. subst.
-    destruct v; simpl in *; try contradiction.
-    inversion H7; simpl in *; try contradiction; subst.
-    auto.
-  - inversion H1; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-  - inversion H2; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-Qed.
-
-Lemma smallstep_bigstep_aux : forall e e', step e e' -> forall v, bigstep e' v -> bigstep e v.
-Proof.
-  induction 1; intros.
-  - eapply bs_app; eauto.
-    eapply bs_val; simpl; eauto.
-  - inversion H1; simpl in *; try contradiction; subst.
-    eapply bs_app; simpl; eauto.
-  - inversion H2; simpl in *; try contradiction; subst.
-    eapply bs_app; eauto.
-Qed.
-
-
-Lemma smallstep_bigstep : forall e v, multistep e v -> is_value_of_exp v -> bigstep e v.
-Proof.
-  induction 1; intros.
-  - destruct e; simpl in *; auto; try contradiction.
-  - eapply smallstep_bigstep_aux; eauto.
-Qed.
-*)

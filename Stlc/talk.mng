@@ -67,7 +67,6 @@ Capture-avoiding substitution:
 \begin{enumerate}
 \item Use an adequate representation to specify this language
 \item Prove that your optimized rep implements that specification
-\item Most difficult proofs involve \emph{open} terms
 \item Tool support helps immensely
 \end{enumerate}
 
@@ -119,7 +118,7 @@ Capture avoiding substitution
 Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
   match e with
   | (var_b n) => var_b n
-  | (var_f x) => (if eq_var x y then u else (var_f x))
+  | (var_f x) => if eq_var x y then u else (var_f x)
   | (abs T e1) => abs T (subst_exp u y e1)
   | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
 end.
