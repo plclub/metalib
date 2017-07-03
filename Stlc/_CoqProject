@@ -1,6 +1,7 @@
 -R . Stlc
 Stlc.v
 Stlc_inf.v
+Nominal.v
 SM.v
 Definitions.v
 Lemmas.v
