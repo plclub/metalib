@@ -174,7 +174,15 @@ decode {y -> 0}, (\x.x), app2 y :: nil
 
 
 
-(* Translation from machine configurations to LN terms *)
+(* Translation from machine configurations to LN terms.
+   For flexibility in the proof, we decode the
+   stack into a stack of LN frames, before applying the
+   decoded stack to LN terms.
+
+   In this way, we only need to use LN substitution.
+   We do not need to define (capture-avoiding) substitution
+   for nominal terms.
+ *)
 
 Fixpoint nom_to_exp (ne : n_exp) : exp :=
   match ne with
@@ -192,24 +200,33 @@ Fixpoint  decode_stack (s : list frame) : list decoded_frame :=
   | n_app2 e :: s' => app2 (nom_to_exp e) :: decode_stack s'
   end.
 
-Fixpoint apply_stack (s : list decoded_frame) (e :exp) : exp :=
-  match s with
-  | nil => e
-  | app2 e' :: s' => apply_stack s' (app e e')
-  end.
 
-(* Note: this is exp -> exp because that is where substitution
-   is defined *)
 Fixpoint apply_heap (h : heap) (e : exp) : exp  :=
   match h with
   | nil => e
   | (x , e') :: h' => apply_heap h' (subst_exp (nom_to_exp e') x e)
   end.
 
+(*
+Fixpoint apply_heap_stack h s :=
+  match s with
+  | nil => nil
+  | app2 a::s' => app2 (apply_heap h a) :: apply_heap_stack h s'
+  end.
+*)
+
+Fixpoint apply_stack h (s : list decoded_frame) (e :exp) : exp :=
+  match s with
+  | nil => e
+  | app2 e' :: s' => apply_stack h s' (app e (apply_heap h e'))
+  end.
+
+
 
 Definition decode (c:conf) : exp  :=
   match c with
-  | (h,e,s) => apply_heap h (apply_stack (decode_stack s) (nom_to_exp e))
+  | (h,e,s) =>  (apply_stack h (decode_stack s)
+                            (apply_heap h (nom_to_exp e)))
   end.
 
 
@@ -234,9 +251,9 @@ Qed.
 
 Hint Resolve apply_heap_lc : lngen.
 
-Lemma apply_stack_lc : forall s e,
+Lemma apply_stack_lc : forall s h e,
     lc_exp e ->
-    lc_exp (apply_stack (decode_stack s) e).
+    lc_exp (apply_stack h (decode_stack s) e).
 Proof.
   induction s; try destruct a; simpl in *; auto with lngen.
 Qed.
@@ -497,24 +514,8 @@ Qed.
 (* ------------------------------------------ *)
 
 (* Next, we define when a heap is "well-scoped".
-   well-scoped heaps have certain properties wrt [get]. *)
-
-Fixpoint fv_heap  (h : heap) :=
-  match h with
-  | nil => {}
-  | (x,e) :: h => fv_exp (nom_to_exp e) \u fv_heap h
-  end.
-
-Lemma apply_heap_close : forall h x e,
-    x `notin` dom h ->
-    x `notin` fv_heap h ->
-    apply_heap h (close_exp_wrt_exp x e) =
-    close_exp_wrt_exp x (apply_heap h e).
-Proof.
-  induction h; intros; simpl; eauto.
-  destruct a; eauto; simpl in *.
-  rewrite subst_exp_close_exp_wrt_exp; eauto with lngen.
-Qed.
+   well-scoped heaps have certain properties,
+   such as wrt [get]. *)
 
 
 Inductive scoped_heap : heap -> Prop :=
@@ -524,6 +525,13 @@ Inductive scoped_heap : heap -> Prop :=
       fv_exp (nom_to_exp e) [<=] dom h ->
       scoped_heap h ->
       scoped_heap ((x,e)::h).
+
+
+Fixpoint fv_heap  (h : heap) :=
+  match h with
+  | nil => {}
+  | (x,e) :: h => fv_exp (nom_to_exp e) \u fv_heap h
+  end.
 
 
 Lemma scoped_heap_fv_heap_dom : forall h,
@@ -537,6 +545,20 @@ Proof.
   rewrite IHh; auto.
   fsetdec.
 Qed.
+
+(*
+Lemma apply_heap_close : forall h x e,
+    x `notin` dom h ->
+    scoped_heap h ->
+    apply_heap h (close_exp_wrt_exp x e) =
+    close_exp_wrt_exp x (apply_heap h e).
+Proof.
+  induction h; intros; simpl; eauto.
+  find_easy_inversion.
+  simpl in *.
+  rewrite subst_exp_close_exp_wrt_exp; eauto with lngen.
+Qed.
+*)
 
 Lemma fv_apply_heap : forall e h,
     scoped_heap h ->
@@ -557,18 +579,14 @@ Proof.
   fsetdec.
 Qed.
 
+(*
 Lemma apply_heap_var : forall h x e1,
     x `notin` dom h ->
-    x `notin` fv_heap h ->
+    scoped_heap h ->
     (apply_heap ((x, e1) :: h) (var_f x)) = apply_heap h (nom_to_exp e1).
-Proof. induction h; intros; simpl.
-       destruct (x==x). auto. contradiction.
-       destruct a as [y e2].
-       destruct (x ==x). auto.
-       simpl. destruct (x==y). contradiction.
-       contradiction.
+Proof. induction h; intros; default_simp.
 Qed.
-
+*)
 Lemma scoped_get : forall h x e,
   scoped_heap h ->
   get x h = Some e ->
@@ -597,15 +615,10 @@ Lemma apply_heap_get :  forall h x e,
     apply_heap h (var_f x) = apply_heap h (nom_to_exp e).
 Proof.
   induction 1.
-  intros; simpl in *. inversion H.
+  intros; simpl in *. discriminate.
   intros; simpl in *.
-  destruct (KeySetFacts.eq_dec x x0); subst.
-  (* this is it! *)
-  destruct (x0 == x0); try contradiction.
-  inversion H2; subst; clear H2.
-  rewrite subst_exp_fresh_eq; auto.
-  (* this is not it! *)
-  destruct (x == x0); try contradiction.
+  destruct (KeySetFacts.eq_dec x x0); subst;
+  default_simp;
   rewrite subst_exp_fresh_eq; auto.
   assert (fv_exp (nom_to_exp e) [<=] dom h).
   eapply scoped_get; eauto.
@@ -615,14 +628,14 @@ Qed.
 
 (* ------------------------------------------ *)
 
-
+(*
 Lemma push :
   forall s e e',
     apply_stack s (app e e') =
     apply_stack (app2 e' :: s) e.
 simpl. auto.
 Qed.
-
+*)
 Lemma combine : forall h x e e',
   apply_heap h ([x ~> nom_to_exp e] e') = (apply_heap ((x,e)::h) e').
 Proof.
@@ -630,18 +643,6 @@ Proof.
 Qed.
 
 (* ------------------------------------------ *)
-
-Lemma swap_fv_eq : forall x0 x n0,
-  x0 `notin` fv_nom n0 ->
-  x `in` fv_nom n0 ->
-  x0 `in` fv_nom (swap x x0 n0).
-Proof.
-  induction n0; intros; simpl in *.
-  unfold swap_var.  default_simp. fsetdec.
-  unfold swap_var.
-  destruct (x1 == x). fsetdec.
-  destruct (x1 == x0).
-Abort.
 
 Fixpoint fv_stack s :=
   match s with
@@ -713,25 +714,38 @@ Qed.
 
 
 
-Fixpoint apply_heap_stack h s :=
-  match s with
-  | nil => nil
-  | app2 a::s' => app2 (apply_heap h a) :: apply_heap_stack h s'
-  end.
-
+(*
 Lemma apply_heap_apply_stack : forall h s e,
       apply_heap h (apply_stack s e) =
       apply_stack (apply_heap_stack h s) (apply_heap h e).
 Proof.
   induction s; intros; try destruct a; simpl in *; eauto.
   rewrite IHs. rewrite apply_heap_app. auto.
-Qed.
+Qed. *)
 
+(*
 Lemma apply_heap_stack_fresh_eq : forall s x e1 h ,
     scoped_heap h ->
     x `notin` dom h ->
     fv_stack s [<=] dom h ->
-    apply_heap_stack ((x, e1) :: h) (decode_stack s) = apply_heap_stack h (decode_stack s).
+    apply_heap_stack ((x, e1) :: h) (decode_stack s) =
+    apply_heap_stack h (decode_stack s).
+Proof.
+  induction s; intros; simpl; eauto.
+  simpl in H.
+  destruct a.
+  simpl in *.
+  rewrite IHs; simpl; eauto.
+  rewrite subst_exp_fresh_eq; auto.
+  fsetdec.
+Qed. *)
+
+Lemma apply_stack_fresh_eq : forall s x e1 h ,
+    scoped_heap h ->
+    x `notin` dom h ->
+    fv_stack s [<=] dom h ->
+    apply_stack ((x, e1) :: h) (decode_stack s) =
+    apply_stack h (decode_stack s).
 Proof.
   induction s; intros; simpl; eauto.
   simpl in H.
@@ -743,10 +757,11 @@ Proof.
 Qed.
 
 
+
 Lemma app_cong : forall s h e e',
     step e e' ->
-    step (apply_stack (apply_heap_stack h (decode_stack s)) e)
-         (apply_stack (apply_heap_stack h (decode_stack s)) e').
+    step (apply_stack h (decode_stack s) e)
+         (apply_stack h (decode_stack s) e').
 Proof.
   induction s; intros; simpl;
   try destruct a; simpl; eauto with lngen.
@@ -776,13 +791,13 @@ Proof.
           simpl in *.
           rewrite combine.
 
-          rewrite apply_heap_apply_stack.
-          rewrite apply_heap_apply_stack.
+(*          rewrite apply_heap_apply_stack.
+          rewrite apply_heap_apply_stack. *)
 
-          rewrite apply_heap_app.
+(*           rewrite apply_heap_app. *)
           rewrite apply_heap_abs.
 
-          rewrite apply_heap_stack_fresh_eq; auto; try fsetdec.
+          rewrite apply_stack_fresh_eq; auto; try fsetdec.
           apply app_cong.
 
           simpl.
@@ -813,13 +828,13 @@ Proof.
           simpl in *.
           rewrite combine.
 
-          rewrite apply_heap_apply_stack.
-          rewrite apply_heap_apply_stack.
+(*          rewrite apply_heap_apply_stack.
+          rewrite apply_heap_apply_stack. *)
 
-          rewrite apply_heap_app.
+(*           rewrite apply_heap_app. *)
           rewrite apply_heap_abs.
 
-          rewrite apply_heap_stack_fresh_eq; auto; try fsetdec.
+          rewrite apply_stack_fresh_eq; auto; try fsetdec.
           apply app_cong.
 
           simpl.
@@ -833,13 +848,14 @@ Proof.
     destruct (get x h) eqn:?; try solve [inversion H].
     + inversion H; subst; clear H.
       left.
-      rewrite apply_heap_apply_stack.
-      rewrite apply_heap_apply_stack.
+(*       rewrite apply_heap_apply_stack.
+      rewrite apply_heap_apply_stack. *)
       f_equal.
       apply apply_heap_get; auto.
     + inversion H; subst; clear H.
       left.
       simpl.
+      rewrite apply_heap_app.
       auto.
 Qed.
 
@@ -865,3 +881,18 @@ Qed.
 
 
 (* TODO: completeness *)
+(*
+Lemma completeness : forall e0 e0' h e s,
+    step e0 e0' ->
+    scoped_heap h ->
+    fv_exp (nom_to_exp e) [<=] dom h ->
+    fv_stack s [<=] dom h ->
+    decode (h,e,s) = e0 ->
+    exists h', exists e', exists s', machine_step (h,e,s) = TakeStep _ (h',e',s').
+Proof.
+  induction 1.
+  - intros.
+    destruct e; simpl in H4.
+    simpl in H2.
+    exists h , (app (abs e1) v).
+*)
