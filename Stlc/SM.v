@@ -8,11 +8,9 @@ Require Import Stlc.Stlc_inf.
    about natural numbers. *)
 Require Import Omega.
 
-(* Notation open e a := (open_exp_wrt_exp e a). *)
-
 
 (*************************************************************)
-(*   Connection to nominal representation of terms           *)
+(*   A nominal representation of terms                       *)
 (*************************************************************)
 
 (* A named representation of STLC terms.
@@ -191,42 +189,21 @@ Fixpoint nom_to_exp (ne : n_exp) : exp :=
   | n_abs x e1 => abs (close_exp_wrt_exp x (nom_to_exp e1))
 end.
 
-Inductive decoded_frame :=
-  | app2 : exp -> decoded_frame.
-
-Fixpoint  decode_stack (s : list frame) : list decoded_frame :=
-  match s with
-  | nil => nil
-  | n_app2 e :: s' => app2 (nom_to_exp e) :: decode_stack s'
-  end.
-
-
 Fixpoint apply_heap (h : heap) (e : exp) : exp  :=
   match h with
   | nil => e
   | (x , e') :: h' => apply_heap h' (subst_exp (nom_to_exp e') x e)
   end.
 
-(*
-Fixpoint apply_heap_stack h s :=
-  match s with
-  | nil => nil
-  | app2 a::s' => app2 (apply_heap h a) :: apply_heap_stack h s'
-  end.
-*)
-
-Fixpoint apply_stack h (s : list decoded_frame) (e :exp) : exp :=
+Fixpoint apply_stack h (s : list frame) (e :exp) : exp :=
   match s with
   | nil => e
-  | app2 e' :: s' => apply_stack h s' (app e (apply_heap h e'))
+  | n_app2 e' :: s' => apply_stack h s' (app e (apply_heap h (nom_to_exp e')))
   end.
-
-
 
 Definition decode (c:conf) : exp  :=
   match c with
-  | (h,e,s) =>  (apply_stack h (decode_stack s)
-                            (apply_heap h (nom_to_exp e)))
+  | (h,e,s) => apply_stack h s (apply_heap h (nom_to_exp e))
   end.
 
 
@@ -253,7 +230,7 @@ Hint Resolve apply_heap_lc : lngen.
 
 Lemma apply_stack_lc : forall s h e,
     lc_exp e ->
-    lc_exp (apply_stack h (decode_stack s) e).
+    lc_exp (apply_stack h s e).
 Proof.
   induction s; try destruct a; simpl in *; auto with lngen.
 Qed.
@@ -279,8 +256,8 @@ Proof.
 Qed.
 
 
-(* Next, we show that nominal terms are aeq iff they decode to the same LN
-   terms.
+(* Next, we show that nominal terms are aeq iff they decode
+   to the same LN terms.
 
    The tricky part of this reasoning below is a lemma that lets us
    convert swapping (with fresh variables) in the nominal calculus
@@ -348,6 +325,7 @@ Qed.
 
 Hint Rewrite swap_size_constant.
 
+(*
 Lemma nominal_induction_size L :
      forall n, forall t, size t <= n ->
      forall P : n_exp -> Prop,
@@ -377,6 +355,7 @@ Definition nominal_induction
     forall t : n_exp, P t :=
   fun L P VAR APP ABS t =>
   nominal_induction_size L (size t) t ltac:(auto) P VAR APP ABS.
+*)
 
 Lemma swap_spec_aux : forall m t w y,
     size t <= m ->
@@ -509,14 +488,20 @@ Proof.
   rewrite subst_exp_open_exp_wrt_exp; eauto with lngen.
 Qed.
 
-
+Lemma combine : forall h x e e',
+  apply_heap h ([x ~> nom_to_exp e] e') = (apply_heap ((x,e)::h) e').
+Proof.
+  simpl. auto.
+Qed.
 
 (* ------------------------------------------ *)
 
-(* Next, we define when a heap is "well-scoped".
-   well-scoped heaps have certain properties,
-   such as wrt [get]. *)
-
+(* Next, we define when a heap is *well-scoped*.
+   well-scoped heaps behave "telescopically".
+   Each binding (x,e) added to the heap, is
+   for a unique name x, and the free variables
+   of e are bound in the remainder of the heap.
+*)
 
 Inductive scoped_heap : heap -> Prop :=
   | scoped_nil  : scoped_heap nil
@@ -527,86 +512,27 @@ Inductive scoped_heap : heap -> Prop :=
       scoped_heap ((x,e)::h).
 
 
-Fixpoint fv_heap  (h : heap) :=
-  match h with
-  | nil => {}
-  | (x,e) :: h => fv_exp (nom_to_exp e) \u fv_heap h
-  end.
-
-
-Lemma scoped_heap_fv_heap_dom : forall h,
-    scoped_heap h ->
-    fv_heap h [<=] dom h.
-Proof.
-  induction h.
-  simpl. fsetdec.
-  simpl. destruct a as [x e0]; simpl.
-  intro k. inversion k. subst.
-  rewrite IHh; auto.
-  fsetdec.
-Qed.
-
-(*
-Lemma apply_heap_close : forall h x e,
-    x `notin` dom h ->
-    scoped_heap h ->
-    apply_heap h (close_exp_wrt_exp x e) =
-    close_exp_wrt_exp x (apply_heap h e).
-Proof.
-  induction h; intros; simpl; eauto.
-  find_easy_inversion.
-  simpl in *.
-  rewrite subst_exp_close_exp_wrt_exp; eauto with lngen.
-Qed.
-*)
-
-Lemma fv_apply_heap : forall e h,
-    scoped_heap h ->
-    fv_exp e [<=] dom h ->
-    fv_exp (apply_heap h e) [<=] dom h.
-Proof.
-  intros e h Sc.
-  apply scoped_heap_fv_heap_dom in Sc.
-  remember (dom h) as D.
-  revert Sc.
-  generalize e.
-  generalize h.
-  induction h0; intros; simpl in *. fsetdec.
-  destruct a as [x e1]; simpl in *.
-  rewrite IHh0; auto. fsetdec.
-  fsetdec.
-  rewrite fv_exp_subst_exp_upper.
-  fsetdec.
-Qed.
-
-(*
-Lemma apply_heap_var : forall h x e1,
-    x `notin` dom h ->
-    scoped_heap h ->
-    (apply_heap ((x, e1) :: h) (var_f x)) = apply_heap h (nom_to_exp e1).
-Proof. induction h; intros; default_simp.
-Qed.
-*)
 Lemma scoped_get : forall h x e,
   scoped_heap h ->
   get x h = Some e ->
   fv_exp (nom_to_exp e) [<=] dom h.
 Proof.
   intros.
-  apply scoped_heap_fv_heap_dom in H.
   remember (dom h) as D.
-  revert H H0.
+  assert (dom h [<=] D). fsetdec.
+  revert H H0 H1.
   generalize h.
   induction h0; intros; simpl in *;
   inversion H0.
   destruct a as [y e0].
+  inversion H.
   destruct (KeySetFacts.eq_dec x y).
-  inversion H2.
+  inversion H0.
   subst.
   fsetdec.
   eapply IHh0.
+  auto. auto.
   fsetdec.
-  auto.
 Qed.
 
 Lemma apply_heap_get :  forall h x e,
@@ -628,27 +554,135 @@ Qed.
 
 (* ------------------------------------------ *)
 
-(*
-Lemma push :
-  forall s e e',
-    apply_stack s (app e e') =
-    apply_stack (app2 e' :: s) e.
-simpl. auto.
-Qed.
-*)
-Lemma combine : forall h x e e',
-  apply_heap h ([x ~> nom_to_exp e] e') = (apply_heap ((x,e)::h) e').
-Proof.
-  simpl. auto.
-Qed.
-
-(* ------------------------------------------ *)
-
 Fixpoint fv_stack s :=
   match s with
     nil => {}
   | n_app2 e :: s => fv_exp (nom_to_exp e) \u fv_stack s
   end.
+
+
+Lemma apply_stack_fresh_eq : forall s x e1 h ,
+    x `notin` fv_stack s ->
+    apply_stack ((x, e1) :: h) s = apply_stack h s.
+Proof.
+  induction s; intros; simpl; eauto.
+  simpl in H.
+  destruct a.
+  rewrite IHs; simpl; eauto.
+  rewrite subst_exp_fresh_eq; auto.
+Qed.
+
+Lemma app_cong : forall s h e e',
+    step e e' ->
+    step (apply_stack h s e)
+         (apply_stack h s e').
+Proof.
+  induction s; intros; simpl;
+  try destruct a; simpl; eauto with lngen.
+Qed.
+
+(* --------------------------------------------------------------- *)
+
+
+(* Could be zero or one steps! *)
+Lemma simulate_step : forall h e s h' e' s' ,
+    machine_step (h,e,s) = TakeStep _ (h',e',s') ->
+    scoped_heap h ->
+    fv_exp (nom_to_exp e) [<=] dom h ->
+    fv_stack s [<=] dom h ->
+    decode (h,e,s) = decode (h',e',s') \/
+    step (decode (h,e,s)) (decode (h',e',s')).
+Proof.
+  intros.
+  simpl in *.
+  destruct (isVal e) eqn:?.
+  destruct s eqn:?.
+  - inversion H.
+  - destruct f eqn:?.
+     + destruct e eqn:?; try solve [inversion H].
+       right.
+       destruct (AtomSetProperties.In_dec x (dom h)).
+       -- destruct (atom_fresh).
+          inversion H; subst; clear H.
+          simpl in *.
+          rewrite combine.
+          rewrite apply_heap_abs.
+          rewrite apply_stack_fresh_eq; auto; try fsetdec.
+          apply app_cong.
+
+          simpl.
+          assert (x <> x0). fsetdec.
+          autorewrite with lngen in *.
+
+          assert (RHS: open_exp_wrt_exp
+                    (apply_heap h (close_exp_wrt_exp x (nom_to_exp n0)))
+                        (apply_heap h (nom_to_exp n)) =
+                  (apply_heap h ([x0 ~> nom_to_exp n]
+                                   nom_to_exp (swap x x0 n0)))).
+          {
+            rewrite <- apply_heap_open; auto with lngen.
+            f_equal.
+            rewrite (subst_exp_intro x0); auto with lngen.
+            rewrite <- subst_exp_spec.
+            rewrite <- swap_spec; auto with lngen.
+            rewrite <- H1 in n1.
+            autorewrite with lngen.
+            fsetdec.
+          }
+          rewrite <- RHS.
+          eapply step_beta; eauto with lngen.
+          rewrite <- apply_heap_abs.
+          apply apply_heap_lc.
+          econstructor; eauto with lngen.
+       -- inversion H; subst; clear H.
+          simpl in *.
+          rewrite combine.
+          rewrite apply_heap_abs.
+
+          rewrite apply_stack_fresh_eq; auto; try fsetdec.
+          apply app_cong.
+
+          simpl.
+          rewrite subst_exp_spec.
+          rewrite apply_heap_open; auto with lngen.
+          apply step_beta; auto with lngen.
+          rewrite <- apply_heap_abs.
+          eapply apply_heap_lc.
+          auto with lngen.
+  - destruct e eqn:?; try solve [inversion H].
+    destruct (get x h) eqn:?; try solve [inversion H].
+    + inversion H; subst; clear H.
+      left.
+      f_equal.
+      apply apply_heap_get; auto.
+    + inversion H; subst; clear H.
+      left.
+      simpl.
+      rewrite apply_heap_app.
+      auto.
+Qed.
+
+Lemma simulate_done : forall h e s,
+    machine_step (h,e,s) = Done _ ->
+    scoped_heap h ->
+    fv_exp (nom_to_exp e) [<=] dom h ->
+    fv_stack s [<=] dom h ->
+    is_value (nom_to_exp e).
+Proof.
+  intros.
+  simpl in *.
+  destruct (isVal e) eqn:?.
+  destruct s eqn:?.
+  - destruct e; simpl in Heqb; inversion Heqb.
+    econstructor; eauto.
+  - destruct f eqn:?.
+     + destruct e eqn:?; try solve [inversion H].
+       econstructor; eauto.
+  - destruct e; inversion H.
+    simpl in Heqb. destruct (get x h); inversion H.
+Qed.
+
+
 
 Lemma machine_is_scoped: forall h e s h' e' s',
     machine_step (h,e,s) = TakeStep _ (h',e',s') ->
@@ -696,187 +730,6 @@ Proof.
     split; auto.
     split; try fsetdec.
     simpl. fsetdec.
-Qed.
-
-(* --------------------------------------------------------------- *)
-
-Lemma apply_heap_fresh_eq : forall x e1 h e,
-    x `notin` dom h ->
-    fv_exp e [<=] dom h ->
-    apply_heap ((x, e1) :: h) e = apply_heap h e.
-Proof.
-  induction h; intros; simpl; eauto.
-  rewrite subst_exp_fresh_eq; auto.
-  destruct a.
-  simpl in *.
-  rewrite (subst_exp_fresh_eq e); auto.
-Qed.
-
-
-
-(*
-Lemma apply_heap_apply_stack : forall h s e,
-      apply_heap h (apply_stack s e) =
-      apply_stack (apply_heap_stack h s) (apply_heap h e).
-Proof.
-  induction s; intros; try destruct a; simpl in *; eauto.
-  rewrite IHs. rewrite apply_heap_app. auto.
-Qed. *)
-
-(*
-Lemma apply_heap_stack_fresh_eq : forall s x e1 h ,
-    scoped_heap h ->
-    x `notin` dom h ->
-    fv_stack s [<=] dom h ->
-    apply_heap_stack ((x, e1) :: h) (decode_stack s) =
-    apply_heap_stack h (decode_stack s).
-Proof.
-  induction s; intros; simpl; eauto.
-  simpl in H.
-  destruct a.
-  simpl in *.
-  rewrite IHs; simpl; eauto.
-  rewrite subst_exp_fresh_eq; auto.
-  fsetdec.
-Qed. *)
-
-Lemma apply_stack_fresh_eq : forall s x e1 h ,
-    scoped_heap h ->
-    x `notin` dom h ->
-    fv_stack s [<=] dom h ->
-    apply_stack ((x, e1) :: h) (decode_stack s) =
-    apply_stack h (decode_stack s).
-Proof.
-  induction s; intros; simpl; eauto.
-  simpl in H.
-  destruct a.
-  simpl in *.
-  rewrite IHs; simpl; eauto.
-  rewrite subst_exp_fresh_eq; auto.
-  fsetdec.
-Qed.
-
-
-
-Lemma app_cong : forall s h e e',
-    step e e' ->
-    step (apply_stack h (decode_stack s) e)
-         (apply_stack h (decode_stack s) e').
-Proof.
-  induction s; intros; simpl;
-  try destruct a; simpl; eauto with lngen.
-Qed.
-
-
-(* Could be zero or one steps! *)
-Lemma simulate_step : forall h e s h' e' s' ,
-    machine_step (h,e,s) = TakeStep _ (h',e',s') ->
-    scoped_heap h ->
-    fv_exp (nom_to_exp e) [<=] dom h ->
-    fv_stack s [<=] dom h ->
-    decode (h,e,s) = decode (h',e',s') \/
-    step (decode (h,e,s)) (decode (h',e',s')).
-Proof.
-  intros.
-  simpl in *.
-  destruct (isVal e) eqn:?.
-  destruct s eqn:?.
-  - inversion H.
-  - destruct f eqn:?.
-     + destruct e eqn:?; try solve [inversion H].
-       right.
-       destruct (AtomSetProperties.In_dec x (dom h)).
-       -- destruct (atom_fresh).
-          inversion H; subst; clear H.
-          simpl in *.
-          rewrite combine.
-
-(*          rewrite apply_heap_apply_stack.
-          rewrite apply_heap_apply_stack. *)
-
-(*           rewrite apply_heap_app. *)
-          rewrite apply_heap_abs.
-
-          rewrite apply_stack_fresh_eq; auto; try fsetdec.
-          apply app_cong.
-
-          simpl.
-          assert (x <> x0). fsetdec.
-          autorewrite with lngen in *.
-
-          assert (RHS: open_exp_wrt_exp
-                    (apply_heap h (close_exp_wrt_exp x (nom_to_exp n0)))
-                        (apply_heap h (nom_to_exp n)) =
-                  (apply_heap h ([x0 ~> nom_to_exp n]
-                                   nom_to_exp (swap x x0 n0)))).
-          {
-            rewrite <- apply_heap_open; auto with lngen.
-            f_equal.
-            rewrite (subst_exp_intro x0); auto with lngen.
-            rewrite <- subst_exp_spec.
-            rewrite <- swap_spec; auto with lngen.
-            rewrite <- H1 in n1.
-            autorewrite with lngen.
-            fsetdec.
-          }
-          rewrite <- RHS.
-          eapply step_beta; eauto with lngen.
-          rewrite <- apply_heap_abs.
-          apply apply_heap_lc.
-          econstructor; eauto with lngen.
-       -- inversion H; subst; clear H.
-          simpl in *.
-          rewrite combine.
-
-(*          rewrite apply_heap_apply_stack.
-          rewrite apply_heap_apply_stack. *)
-
-(*           rewrite apply_heap_app. *)
-          rewrite apply_heap_abs.
-
-          rewrite apply_stack_fresh_eq; auto; try fsetdec.
-          apply app_cong.
-
-          simpl.
-          rewrite subst_exp_spec.
-          rewrite apply_heap_open; auto with lngen.
-          apply step_beta; auto with lngen.
-          rewrite <- apply_heap_abs.
-          eapply apply_heap_lc.
-          auto with lngen.
-  - destruct e eqn:?; try solve [inversion H].
-    destruct (get x h) eqn:?; try solve [inversion H].
-    + inversion H; subst; clear H.
-      left.
-(*       rewrite apply_heap_apply_stack.
-      rewrite apply_heap_apply_stack. *)
-      f_equal.
-      apply apply_heap_get; auto.
-    + inversion H; subst; clear H.
-      left.
-      simpl.
-      rewrite apply_heap_app.
-      auto.
-Qed.
-
-Lemma simulate_done : forall h e s,
-    machine_step (h,e,s) = Done _ ->
-    scoped_heap h ->
-    fv_exp (nom_to_exp e) [<=] dom h ->
-    fv_stack s [<=] dom h ->
-    is_value (nom_to_exp e).
-Proof.
-  intros.
-  simpl in *.
-  destruct (isVal e) eqn:?.
-  destruct s eqn:?.
-  - destruct e; simpl in Heqb; inversion Heqb.
-    econstructor; eauto.
-  - destruct f eqn:?.
-     + destruct e eqn:?; try solve [inversion H].
-       econstructor; eauto.
-  - destruct e; inversion H.
-    simpl in Heqb. destruct (get x h); inversion H.
 Qed.
 
 
