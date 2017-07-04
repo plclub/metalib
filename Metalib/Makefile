@@ -59,6 +59,7 @@ install:
 
 clean:
 	@$(MAKE) -f $(COQMKFILENAME) clean
+	rm -if $(COQMKFILENAME)
 
 
 ############################################################################
