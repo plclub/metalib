@@ -481,23 +481,14 @@ Qed.
 
 (* /LATER *)
 
+(* HIDE *)
+
 (*
 Lemma subst_rec_size_weaken :
   forall n1 t u x (p1 : size t <= n1) (p2: size t <= size t),
     subst_rec n1 t p1 u x = subst_rec (size t) t p2 u x.
 Proof.
-  induction n1.
-  intros. destruct t; simpl in p1; omega.
-  intros. destruct t.
-  - simpl in *. auto.
-  - simpl in *.
-    destruct (x == x0); subst; auto.
-    destruct atom_fresh; auto.
-    replace (size t) with (size (swap x0 x1 t)).
-    erewrite IHn1.
-
-
-  -
+Admitted.
 
 
 Definition subst (u : n_exp) (x:atom) (t:n_exp) :=
@@ -618,6 +609,8 @@ Proof.
       eapply typing_heap_cons; eauto.
 *)
 
+
+
 Lemma aeq_fv_nom : forall n1 n2,
     aeq n1 n2 ->
     fv_nom n1 [=] fv_nom n2.
@@ -654,5 +647,7 @@ Proof.
     rewrite <- aeq_fv_nom; eauto.
     assert (aeq (swap x x0 n2) (swap x x0 n6)).
     eapply aeq_equivariance; auto.
-    admit. (* sized based ih *)
+    admit.
 Admitted.
+
+(* /HIDE *)
