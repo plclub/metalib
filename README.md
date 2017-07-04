@@ -14,11 +14,10 @@ COMPILATION, INSTALLATION, AND DOCUMENTATION:
 
 TUTORIAL:
 
-  The metatheory library comes with a short tutorial.  The main files for the
-  tutorial are STLC.v, and STLCsol.v.  Make sure that you've compiled the
-  library first. The file [STLC.v](STLC.v) contains an introduction to
-  mechanizing programming language definitions with binding in Coq and how to
-  reason about them.  Solutions to exercises are in [STLCsol.v](STLCsol.v).
+  The metatheory library comes with a tutorial in directory [Stlc].  Make sure
+  that you've compiled the library first. These files contains an introduction
+  to mechanizing programming language definitions with binding in Coq and how
+  to reason about them.
 
   Those new to Coq should start with Software Foundations, which is an
   introduction to using Coq. The tutorial assumes some familarity with

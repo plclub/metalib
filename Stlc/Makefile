@@ -2,7 +2,7 @@ RULESFILE = stlc-rules.tex
 
 GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v Connect.v
 
-all:talk.pdf
+all: coq
 
 clean: Stlc.mk
 	make -f Stlc.mk clean

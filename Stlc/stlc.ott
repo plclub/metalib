@@ -19,16 +19,17 @@ indexvar index, i ::=
 grammar
 
 typ, T :: 'typ_' ::= {{ com types }}
-  | base        ::   :: base
+  | base        ::   :: base   {{ com base type }}
     {{ tex \mathsf{o} }}
-  | T1 -> T2    ::   :: arrow
+  | T1 -> T2    ::   :: arrow  {{ com function types }}
 
 exp, e, v :: ''     ::= {{ com expressions }}
-  | x              ::   :: var
+  | x              ::   :: var {{ com variables }}
   | \ x . e        ::   :: abs
     (+ bind x in e +)
+    {{ com abstractions }}
 	 {{ tex [[\]][[x]].[[e]] }}
-  | e1 e2          ::   :: app
+  | e1 e2          ::   :: app {{ com applications }}
   | e1 [ x ~> e2 ] :: M :: subst
      {{ coq (open_exp_wrt_exp [[x e1]][[e2]]) }}
   | ( e )          :: S :: paren
@@ -51,8 +52,10 @@ grammar
 
 ctx, G {{ tex \Gamma }} :: ''     ::= {{ com typing context }} {{ coq list ( atom * typ ) }}
   | empty          ::   :: Empty {{ coq nil }}
+                                 {{ tex \bullet }}
+                                 {{ com empty context }}
   | G , x : T      ::   :: Cons  {{ coq (([[x]]~[[T]])++[[G]]) }}
-
+                                 {{ com assumption }}
 
 terminals :: 'terminals_' ::=
     | \                   ::   :: lambda     {{ tex \lambda }}
@@ -71,6 +74,7 @@ formula :: 'formula_' ::=
     {{ coq is_value [[v]] }}
   | uniq G                   ::   :: uniqG
     {{ coq uniq [[G]] }}
+	 {{ tex \mathsf{uniq}[[G]] }}
   | x : T in G               ::   :: inG
     {{ coq binds [[x]][[T]][[G]] }}
   | x notin fv e             ::   :: fresh
@@ -99,8 +103,10 @@ defns
 
 JTyping :: '' ::=
 
+
 defn
 G |- e : T ::   :: typing :: 'typing_'
+{{ com Typing rules }}
 by
 
 uniq G
@@ -125,6 +131,7 @@ JEval :: '' ::=
 
 defn
 e --> e' ::   :: step :: 'step_'
+{{ com Small-step operational semantics }}
 by
 
 ------------------------------- :: beta
@@ -133,55 +140,3 @@ by
 e1 --> e1'
 ----------------- :: app
 e1 e2 --> e1' e2
-
-defns
-
-JBig :: '' ::=
-
-defn
-e ==> v  ::  :: bigstep :: 'bs_'
-by
-
-e1 ==> \x.e1'
-e2 ==> v1
-e1' [ x ~> v1 ] ==> v2
----------------------- :: app
-e1 e1 ==> v2
-
------------------ :: val
-v ==> v
-
-
-defns
-
-Jeq :: '' ::=
-
-defn
-e = e' ::  :: eq :: 'eq_'  by
-
-
------- :: refl
-e = e
-
-e1 = e2
---------- :: sym
-e2 = e1
-
-e1 = e2
-e2 = e3
---------- :: trans
-e1 = e3
-
---------------------- :: beta
-(\x.e) e1 = e [x ~> e1]
-
-
-e1 = e2
-------------- :: abs_cong
-\x.e1 = \x.e2
-
-
-e1 = e1'
-e2 = e2'
---------------- :: app_cong
-e1 e1' = e2 e2'
