@@ -3,25 +3,6 @@
 (** The simply-typed lambda calculus in Coq. *)
 (*************************************************************************)
 
-(** An interactive tutorial on developing programming language metatheory.
-    This file uses the simply-typed lambda calculus (STLC) to demonstrate the
-    locally nameless representation of lambda terms and cofinite
-    quantification in judgments.
-
-    This tutorial concentrates on "how" to formalize STLC; for more details
-    about "why" we use this style of development see the associated lecture
-    slides.
-
-    Tutorial author: Stephanie Weirich, based on prior tutorials by Brian
-    Aydemir and Stephanie Weirich, with help from Aaron Bohannon, Nate Foster,
-    Benjamin Pierce, Jeffrey Vaughan, Dimitrios Vytiniotis, and Steve
-    Zdancewic.  Adapted from code by Arthur Chargu'eraud.
-
-*)
-
-
-(*************************************************************************)
-
 
 (* First, we import a number of definitions from the Metatheory library (see
     Metatheory.v).  The following command makes those definitions available in
@@ -365,3 +346,265 @@ Proof.
   - rewrite IHe1_1. rewrite IHe1_2.
     fsetdec.
 Qed. (* /ADMITTED *)
+
+(*************************************************************************)
+(*************************************************************************)
+(*************************************************************************)
+(*************************************************************************)
+
+
+
+(*************************************************************************)
+(** * Opening *)
+(*************************************************************************)
+
+(** Opening replaces an index with a term, and is defined in the Definitions
+    module.  (Also don't miss the notations at the end of the file.)
+*)
+
+
+(** This next demo shows the operation of [open].  For example, the
+    locally nameless representation of the term (\y. (\x. (y x)) y) is
+    [abs (app (abs (app 1 0)) 0)].  To look at the body without the
+    outer abstraction, we need to replace the indices that refer to
+    that abstraction with a name.  Therefore, we show that we can open
+    the body of the abs above with Y to produce [app (abs (app Y 0))
+    Y)].
+*)
+
+Lemma demo_open :
+  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
+  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
+Proof.
+  unfold open_exp_wrt_exp.
+  unfold open_exp_wrt_exp_rec.
+  simpl.
+  auto.
+Qed.
+
+(* HINT for demo: To show the equality of the two sides below, use the
+   tactics [unfold], which replaces a definition with its RHS and
+   reduces it to head form, and [simpl], which reduces the term the
+   rest of the way.  Then finish up with [auto].  *)
+
+(* Now use this tactic to simplify the proof above. *)
+Ltac simpl_open :=
+  unfold open_exp_wrt_exp; unfold open_exp_wrt_exp_rec; simpl;
+  fold open_exp_wrt_exp_rec; fold open_exp_wrt_exp.
+
+Lemma demo_open_revised :
+  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
+  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
+Proof.
+  (* ADMITTED *)
+  simpl_open.
+  reflexivity.
+Qed. (* /ADMITTED *)
+
+
+(*************************************************************************)
+(** * Local closure *)
+(*************************************************************************)
+
+(** The local closure judgement classifies terms that have *no* dangling
+   indices.
+
+   Step through this derivation to see why the term is locally closed.
+*)
+
+Lemma demo_lc :
+  lc_exp (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
+Proof.
+  eapply lc_app.
+    eapply lc_abs.
+     intro x. simpl_open.
+     auto.
+    auto.
+Qed.
+
+(*************************************************************************)
+(** More Properties about basic operations *)
+(*************************************************************************)
+
+(** The most important properties about open and lc_exp concern their relationship
+    with the free variable and subst functions.
+
+    For example, one important property is shown below: that we can
+    commute free and bound variable substitution.
+
+    We won't prove this lemma as part of the tutorial (it is proved
+    in Lemmas.v), but it is an important building block for reasoning
+    about LN terms.
+
+ *)
+
+Lemma subst_exp_open_exp_wrt_exp :
+forall e3 e1 e2 x1,
+  lc_exp e1 ->
+  [x1 ~> e1] (open e3 e2) = open ([x1 ~> e1] e3) ([x1 ~> e1] e2).
+Proof.
+Admitted.
+
+(** *** Exercise [subst_var] *)
+
+(** The lemma above is most often used with [e2] as some fresh
+    variable. Therefore, it simplifies matters to define the following useful
+    corollary.
+
+    HINT: Do not use induction.  Rewrite with [subst_exp_open_exp_wrt_exp] and
+    [subst_neq_var].
+
+*)
+
+Lemma subst_var : forall (x y : var) u e,
+  y <> x ->
+  lc_exp u ->
+  ([x ~> u] e) ^ y = [x ~> u] (e ^ y).
+Proof.
+  (* ADMITTED *)
+  intros x y u e Neq H.
+  rewrite subst_exp_open_exp_wrt_exp with (e2 := var_f y); auto.
+  rewrite subst_neq_var; auto.
+Qed.   (* /ADMITTED *)
+
+(** *** Take-home Exercise [subst_exp_intro] *)
+
+(** This next lemma states that opening can be replaced with variable
+    opening and substitution.
+
+    HINT: Prove by induction on [e], first generalizing the
+    argument to [open] by using the [generalize] tactic, e.g.,
+    [generalize 0].
+
+*)
+
+Lemma subst_exp_intro : forall (x : var) u e,
+  x `notin` (fv_exp e) ->
+  open e u = [x ~> u](e ^ x).
+Proof.
+  (* ADMITTED *)
+  intros x u e FV_EXP.
+  unfold open.
+  unfold open_exp_wrt_exp.
+  generalize 0.
+  induction e; intro n0; simpl.
+  - Case "var_b".
+    destruct (lt_eq_lt_dec n n0).
+    destruct s. simpl. auto.
+    rewrite subst_eq_var. auto.
+    simpl. auto.
+  - Case "var_f".
+    destruct (x0 == x). subst. simpl in FV_EXP. fsetdec. auto.
+  - Case "abs".
+    f_equal. simpl in FV_EXP. apply IHe. auto.
+  - Case "app".
+    simpl in FV_EXP.
+    f_equal.
+    apply IHe1. auto.
+    apply IHe2. auto.
+Qed. (* /ADMITTED *)
+
+
+(*************************************************************************)
+(** Forall quantification in [lc_exp].                                   *)
+(*************************************************************************)
+
+(* Let's look more closely at lc_abs and lc_exp_ind. *)
+
+Check lc_exp_ind.
+
+(* The induction principle for the lc_exp relation is particularly strong
+   in the abs case.
+
+<<
+ forall P : exp -> Prop,
+       ...
+       (forall e : exp,
+        (forall x : atom, lc_exp (e ^ x)) ->
+        (forall x : atom, P (e ^ x)) -> P (abs e)) ->
+       ...
+       forall e : exp, lc_exp e -> P e
+>>
+
+  This principle says that to prove that a property holds for an abstraction,
+  we can assume that the property holds for the body of the abstraction,
+  opened with *any* variable that we like.
+
+*)
+
+
+Check lc_abs.
+
+(* However, on the other hand, when we show that an abstraction is locally
+   closed, we need to show that its body is locally closed, when
+   opened by any variable.
+
+   That can sometimes be a problem. *)
+
+Lemma subst_lc0 : forall (x : var) u e,
+  lc_exp e ->
+  lc_exp u ->
+  lc_exp ([x ~> u] e).
+Proof.
+  intros x u e He Hu.
+  induction He.
+  - Case "lc_var_f".
+    simpl.
+    destruct (x0 == x).
+      auto.
+      auto.
+  - Case "lc_abs".
+    simpl.
+    eapply lc_abs.
+    intros x0.
+    rewrite subst_var.
+    apply H0.
+Admitted.
+
+(** Here we are stuck. We don't know that [x0] is not equal to [x],
+    which is a preconduction for [subst_var].
+
+    The solution is to prove an alternative introduction rule for
+    local closure for abstractions.  In the current rule, we need
+    to show that the body of the abstraction is locally closed,
+    no matter what variable we choose for the binder.
+
+
+<<
+  | lc_abs : forall e,
+      (forall x:var, lc_exp (open e x)) ->
+      lc_exp (abs e)
+>>
+
+    An easier to use lemma requires us to only show that the body
+    of the abstraction is locally closed for a *single* variable.
+
+    As before, we won't prove this lemma as part of the tutorial,
+    (it too is proved in Lemmas.v) but we will use it as part of
+    our reasoning.
+*)
+Lemma lc_abs_exists : forall (x : var) e,
+      lc_exp (e ^ x) ->
+      lc_exp (abs e).
+Admitted.
+
+(** For example, with this addition, we can complete the proof above. *)
+
+Lemma subst_exp_lc_exp : forall (x : var) u e,
+  lc_exp e ->
+  lc_exp u ->
+  lc_exp ([x ~> u] e).
+Proof.
+  intros x u e He Hu.
+  induction He.
+  - Case "lc_var_f".
+    simpl.
+    destruct (x0 == x); auto.
+  - Case "lc_abs".
+    simpl.
+    pick fresh x0 for {{x}}.  (* make sure that x0 <> x *)
+    apply (lc_abs_exists x0).
+    rewrite subst_var; auto.
+  - Case "lc_app".
+    simpl. eauto.
+Qed.

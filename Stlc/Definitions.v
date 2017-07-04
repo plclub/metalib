@@ -4,15 +4,15 @@ Require Import Metalib.Metatheory.
 (** * Syntax of STLC *)
 (*************************************************************************)
 
-(** We use a locally nameless representation for the simply-typed
-    lambda calculus, where bound variables are represented as natural
-    numbers (de Bruijn indices) and free variables are represented as
-    [atom]s.
+(** We use a locally nameless representation for the simply-typed lambda
+    calculus, where bound variables are represented as natural numbers (de
+    Bruijn indices) and free variables are represented as [atom]s.
 
-    The type [atom], defined in the MetatheoryAtom library, represents
-    names.  Equality on names is decidable ([eq_atom_dec]), and it is
-    possible to generate an atom fresh for any given finite set of
-    atoms ([atom_fresh]).
+    The type [atom], defined in the Metatheory library, represents names.
+    Equality on names is decidable, and it is possible to generate an atom
+    fresh for any given finite set of atoms ([atom_fresh]).
+
+    Note: the type [var] is notation for [atom].
 *)
 
 Inductive typ : Set :=  (*r types *)
@@ -39,21 +39,20 @@ Inductive exp : Set :=  (*r expressions *)
         passing under a binder.
 *)
 
-(** The [Fixpoint] keyword defines a Coq function.  As all functions
-    in Coq must be total.  The annotation [{struct e}] indicates the
-    termination metric---all recursive calls in this definition are
-    made to arguments that are structurally smaller than [e].
+(** The [Fixpoint] keyword defines a Coq function.  As all functions in Coq
+    must be total.  The annotation [{struct e}] indicates the termination
+    metric---all recursive calls in this definition are made to arguments that
+    are structurally smaller than [e].
 
-    Note also that subst uses the function [eq_var x z] for decidable var
-    equality.  This operation is defined in the Metatheory library.
-*)
+    Note also that [subst_exp] uses [x == z] for decidable equality.  This
+    operation is defined in the Metatheory library.  *)
 
 (** substitutions *)
 Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
   match e with
-  | (var_b n) => var_b n
-  | (var_f x) => (if eq_var x y then u else (var_f x))
-  | (abs e1) => abs (subst_exp u y e1)
+  | (var_b n)   => var_b n
+  | (var_f x)   => (if eq_var x y then u else (var_f x))
+  | (abs e1)    => abs (subst_exp u y e1)
   | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
 end.
 
@@ -61,7 +60,7 @@ end.
 (** * Free variables *)
 (*************************************************************************)
 
-(** The function [fv], defined below, calculates the set of free
+(** The function [fv_exp], defined below, calculates the set of free
     variables in an expression.  Because we are using a locally
     nameless representation, where bound variables are represented as
     indices, any name we see is a free variable of a term.  In
@@ -77,9 +76,8 @@ Fixpoint fv_exp (e_5:exp) : vars :=
   | (app e1 e2) => (fv_exp e1) \u (fv_exp e2)
 end.
 
-(** The type [atoms] represents a finite set of elements of type
-    [atom].  The notation for infix union is defined in the Metatheory
-    library.
+(** The type [vars] represents a finite set of elements of type [atom].  The
+    notations for these finite sets is also defined in the Metatheory library.
 *)
 
 
@@ -111,8 +109,6 @@ end.
     There is no need to worry about variable capture because bound variables
     are indices.  *)
 
-(** arities *)
-(** opening up abstractions *)
 Fixpoint open_exp_wrt_exp_rec (k:nat) (u:exp) (e:exp) {struct e}: exp :=
   match e with
   | (var_b n) =>
@@ -123,20 +119,12 @@ Fixpoint open_exp_wrt_exp_rec (k:nat) (u:exp) (e:exp) {struct e}: exp :=
       end
   | (var_f x) => var_f x
   | (abs e) => abs (open_exp_wrt_exp_rec (S k) u e)
-  | (app e1 e2) => app (open_exp_wrt_exp_rec k u e1) (open_exp_wrt_exp_rec k u e2)
+  | (app e1 e2) => app (open_exp_wrt_exp_rec k u e1)
+                      (open_exp_wrt_exp_rec k u e2)
 end.
 
 Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
 
-(*************************************************************************)
-(** * Notations *)
-(*************************************************************************)
-
-
-Module StlcNotations.
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
-Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
-End StlcNotations.
 
 
 (*************************************************************************)
@@ -155,16 +143,16 @@ End StlcNotations.
     arising from the definition of pre-terms.  *)
 
 
-Inductive lc_exp : exp -> Prop :=    (* defn lc_exp *)
+Inductive lc_exp : exp -> Prop :=
  | lc_var_f : forall (x:var),
-     (lc_exp (var_f x))
+     lc_exp (var_f x)
  | lc_abs : forall (e:exp),
-      ( forall x , lc_exp  (open_exp_wrt_exp e (var_f x) )  )  ->
-     (lc_exp (abs e))
+      (forall x , lc_exp (open_exp_wrt_exp e (var_f x)))  ->
+     lc_exp (abs e)
  | lc_app : forall (e1 e2:exp),
-     (lc_exp e1) ->
-     (lc_exp e2) ->
-     (lc_exp (app e1 e2)).
+     lc_exp e1 ->
+     lc_exp e2 ->
+     lc_exp (app e1 e2).
 
 
 (*************************************************************************)
@@ -175,10 +163,10 @@ Inductive lc_exp : exp -> Prop :=    (* defn lc_exp *)
     keys and values) whose keys are [atom]s.
 *)
 
-Definition ctx : Set := list ( atom * typ ).
+Definition ctx : Set := list (atom * typ).
 
 (** For STLC, environments bind [atom]s to [typ]s.  We define an abbreviation
-    [env] for the type of these environments.
+    [ctx] for the type of these environments.
 
     Lists are defined in Coq's standard library, with the constructors [nil]
     and [cons].  The list library includes the [::] notation for cons as well
@@ -188,7 +176,7 @@ Definition ctx : Set := list ( atom * typ ).
     The Metatheory library extends this reasoning by instantiating the
     AssocList library to provide support for association lists whose keys are
     [atom]s.  Everything in this library is polymorphic over the type of
-    objects bound in the environment.  Look in AssocList for additional
+    objects bound in the environment.  Look in AssocList.v for additional
     details about the functions and predicates that we mention below.
  *)
 
@@ -228,12 +216,8 @@ Inductive typing : ctx -> exp -> typ -> Prop :=
 (** * Values and Small-step Evaluation *)
 (*************************************************************************)
 
-(** In order to state the preservation lemma, we need to define values and the
-    small-step evaluation relation.  These relations are straightforward to
-    define.
-
-    Note the hypotheses which ensure that the relations hold only for locally
-    closed terms.  *)
+(** Finally, we define values and a call-by-name small-step evaluation
+    relation. In STLC, abstractions are the only value. *)
 
 Definition is_value (e : exp) : Prop :=
   match e with
@@ -241,12 +225,17 @@ Definition is_value (e : exp) : Prop :=
   | _       => False
   end.
 
-(* defns JEval *)
-Inductive step : exp -> exp -> Prop :=    (* defn step *)
- | step_beta : forall (e1 v:exp),
+(** For [step_beta], note that we use [open_exp_wrt_exp] instead of
+    substitution --- no variable names are involved.
+
+    Note also the hypotheses in [step] that ensure that the relation holds
+    only for locally closed terms.  *)
+
+Inductive step : exp -> exp -> Prop :=
+ | step_beta : forall (e1 e2:exp),
      lc_exp (abs e1) ->
-     lc_exp v ->
-     step (app  ( (abs e1) )  v)  (open_exp_wrt_exp  e1 v )
+     lc_exp e2 ->
+     step (app  (abs e1) e2)  (open_exp_wrt_exp  e1 e2)
  | step_app : forall (e1 e2 e1':exp),
      lc_exp e2 ->
      step e1 e1' ->
@@ -254,3 +243,23 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 
 
 Hint Constructors typing step lc_exp.
+
+(*************************************************************************)
+(** * Notations *)
+(*************************************************************************)
+
+
+(** Many common applications of opening replace index zero with an
+    expression or variable.  The following definition provides a
+    convenient shorthand for such uses.  Note that the order of
+    arguments is switched relative to the definition above.  For
+    example, [(open e x)] can be read as "substitute the variable [x]
+    for index [0] in [e]" and "open [e] with the variable [x]."
+*)
+
+
+Module StlcNotations.
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
+Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
+End StlcNotations.

@@ -268,3 +268,66 @@ Example: evaluation of  "(\y. (\x. x) y) 0"
 substitution semantics.)
 
 *)
+
+(*
+Inductive typ := typ_base | typ_arrow : typ -> typ -> typ.
+
+Definition ctx := list (atom * typ).
+
+Inductive typing : ctx -> n_exp -> typ -> Prop :=
+ | typing_var : forall (G:ctx) (x:var) (T:typ),
+     uniq G ->
+     binds x T G  ->
+     typing G (n_var x) T
+ | typing_abs : forall (G:ctx) x (T1:typ) (e:n_exp) (T2:typ),
+     typing ([(x, T1)] ++ G) e T2  ->
+     typing G (n_abs x e) (typ_arrow T1 T2)
+ | typing_app : forall (G:ctx) (e1 e2:n_exp) (T2 T1:typ),
+     typing G e1 (typ_arrow T1 T2) ->
+     typing G e2 T1 ->
+     typing G (n_app e1 e2) T2 .
+
+Inductive typing_stack (G : ctx) : stack -> typ -> typ -> Prop :=
+| typing_stack_nil : forall T, typing_stack G nil T T
+| typing_stack_app2 : forall s e T T1 T2,
+    typing G e T1 ->
+    typing_stack G s T T2 ->
+    typing_stack G ((n_app2 e)::s) T (typ_arrow T1 T2).
+
+Inductive typing_heap : ctx -> heap -> Prop :=
+ | typing_heap_nil : typing_heap nil nil
+ | typing_heap_cons : forall G h x e T,
+     typing G e T ->
+     typing_heap G h ->
+     typing_heap ((x, T)::G) ((x,e)::h).
+
+Inductive typing_conf : conf -> typ -> Prop :=
+ | typing_conf_witness:
+     forall h e s G T1 T2,
+       typing_heap G h ->
+       typing_stack G s T1 T2 ->
+       typing G e T1 ->
+       typing_conf (h,e,s) T2.
+
+Lemma preservation : forall T h e s conf',
+    machine_step (dom h) (h,e,s) = TakeStep _ conf' ->
+    typing_conf (h,e,s)  T ->
+    typing_conf conf' T.
+Proof.
+  intros.
+  destruct conf' as [[h' e'] s']. inversion H0. subst.
+  simpl in *.
+  destruct (isVal e) eqn:?.
+  - destruct s eqn:?. inversion H.
+    destruct f.
+    destruct e eqn:?. inversion H.
+    destruct AtomSetProperties.In_dec.
+    + destruct atom_fresh.
+      inversion H. subst. clear H.
+      simpl in *.
+      inversion H7. subst. clear H7.
+      inversion H6. subst. clear H6.
+      econstructor; eauto.
+      instantiate (1 :=  [(x0,T3)] ++ G).
+      eapply typing_heap_cons; eauto.
+*)

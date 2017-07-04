@@ -1,272 +1,16 @@
 (*************************************************************************)
 (*                                                                       *)
-(* Lecture 2                                                             *)
+(* Lecture 2 - Typing: preservation and progress                         *)
 (*                                                                       *)
 (*************************************************************************)
 
 Require Import Metalib.Metatheory.
-
 Require Import Stlc.Definitions.
-
 Import StlcNotations.
 
 Require Import Stlc.Lemmas.
 
 Require Import Stlc.Lec1.
-
-(*************************************************************************)
-(** * Opening *)
-(*************************************************************************)
-
-(** Opening replaces an index with a term.  It corresponds to informal
-    substitution for a bound variable, such as in the rule for beta
-    reduction. Note that only "dangling" indices (those that do not
-    refer to any abstraction) can be opened.
-*)
-
-(** Many common applications of opening replace index zero with an
-    expression or variable.  The following definition provides a
-    convenient shorthand for such uses.  Note that the order of
-    arguments is switched relative to the definition above.  For
-    example, [(open e x)] can be read as "substitute the variable [x]
-    for index [0] in [e]" and "open [e] with the variable [x]."
-*)
-
-
-Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
-
-(** This next demo shows the operation of [open].  For example, the
-    locally nameless representation of the term (\y. (\x. (y x)) y) is
-    [abs (app (abs (app 1 0)) 0)].  To look at the body without the
-    outer abstraction, we need to replace the indices that refer to
-    that abstraction with a name.  Therefore, we show that we can open
-    the body of the abs above with Y to produce [app (abs (app Y 0))
-    Y)].
-*)
-
-Lemma demo_open :
-  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
-  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
-Proof.
-  unfold open_exp_wrt_exp.
-  unfold open_exp_wrt_exp_rec.
-  simpl.
-  auto.
-Qed.
-
-(* HINT for demo: To show the equality of the two sides below, use the
-   tactics [unfold], which replaces a definition with its RHS and
-   reduces it to head form, and [simpl], which reduces the term the
-   rest of the way.  Then finish up with [auto].  *)
-
-(* Now use this tactic to simplify the proof above. *)
-Ltac simpl_open :=
-  unfold open_exp_wrt_exp; unfold open_exp_wrt_exp_rec; simpl;
-  fold open_exp_wrt_exp_rec; fold open_exp_wrt_exp.
-
-Lemma demo_open_revised :
-  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
-  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
-Proof.
-  (* ADMITTED *)
-  simpl_open.
-  reflexivity.
-Qed. (* /ADMITTED *)
-
-
-(*************************************************************************)
-(** * Local closure *)
-(*************************************************************************)
-
-(* The local closure judgement classifies terms that have *no* dangling
-   indices.
-
-   Step through this derivation to see why the term is locally closed.
-*)
-
-Lemma demo_lc :
-  lc_exp (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
-Proof.
-  eapply lc_app.
-    eapply lc_abs.
-     intro x. simpl_open.
-     auto.
-    auto.
-Qed.
-
-(*************************************************************************)
-(** More Properties about basic operations *)
-(*************************************************************************)
-
-(** The most important properties about open and lc_exp concern their relationship
-    with the free variable and subst functions. *)
-
-Lemma subst_exp_open_exp_wrt_exp :
-forall e3 e1 e2 x1,
-  lc_exp e1 ->
-  [x1 ~> e1] (open e3 e2) = open ([x1 ~> e1] e3) ([x1 ~> e1] e2).
-Proof.
-Admitted.
-
-(** *** Exercise [subst_var] *)
-
-(** The lemma above is most often used with [e2] as some fresh
-    variable. Therefore, it simplifies matters to define the following useful
-    corollary.
-
-    HINT: Do not use induction.  Rewrite with [subst_exp_open_exp_wrt_exp] and
-    [subst_neq_var].
-
-*)
-
-Lemma subst_var : forall (x y : var) u e,
-  y <> x ->
-  lc_exp u ->
-  ([x ~> u] e) ^ y = [x ~> u] (e ^ y).
-Proof.
-  (* ADMITTED *)
-  intros x y u e Neq H.
-  rewrite subst_exp_open_exp_wrt_exp with (e2 := var_f y); auto.
-  rewrite subst_neq_var; auto.
-Qed.   (* /ADMITTED *)
-
-(** *** Take-home Exercise [subst_intro] *)
-
-(** This lemma states that opening can be replaced with variable
-    opening and substitution.
-
-    HINT: Prove by induction on [e], first generalizing the
-    argument to [open] by using the [generalize] tactic, e.g.,
-    [generalize 0].
-
-*)
-
-Lemma subst_exp_intro : forall (x : var) u e,
-  x `notin` (fv_exp e) ->
-  open e u = [x ~> u](e ^ x).
-Proof.
-  (* ADMITTED *)
-  intros x u e FV_EXP.
-  unfold open.
-  unfold open_exp_wrt_exp.
-  generalize 0.
-  induction e; intro n0; simpl.
-  - Case "var_b".
-    destruct (lt_eq_lt_dec n n0).
-    destruct s. simpl. auto.
-    rewrite subst_eq_var. auto.
-    simpl. auto.
-  - Case "var_f".
-    destruct (x0 == x). subst. simpl in FV_EXP. fsetdec. auto.
-  - Case "abs".
-    f_equal. simpl in FV_EXP. apply IHe. auto.
-  - Case "app".
-    simpl in FV_EXP.
-    f_equal.
-    apply IHe1. auto.
-    apply IHe2. auto.
-Qed. (* /ADMITTED *)
-
-
-
-(*************************************************************************)
-(** Forall quantification in [lc_exp].                                   *)
-(*************************************************************************)
-
-(* Let's look more closely at lc_abs and lc_exp_ind. *)
-
-Check lc_exp_ind.
-
-(* The induction principle for the lc_exp relation is particularly strong
-   in the abs case.
-
-<<
- forall P : exp -> Prop,
-       ...
-       (forall e : exp,
-        (forall x : atom, lc_exp (e ^ x)) ->
-        (forall x : atom, P (e ^ x)) -> P (abs e)) ->
-       ...
-       forall e : exp, lc_exp e -> P e
->>
-
-  This principle says that to prove that a property holds for an abstraction,
-  we can assume that the property holds for the body of the abstraction,
-  opened with *any* variable that we like.
-
-*)
-
-
-Check lc_abs.
-
-(* However, on the other hand, when we show that an abstraction is locally
-   closed, we need to show that its body is locally closed, when
-   opened by any variable.
-
-   That can sometimes be a problem. *)
-
-Lemma subst_lc0 : forall (x : var) u e,
-  lc_exp e ->
-  lc_exp u ->
-  lc_exp ([x ~> u] e).
-Proof.
-  intros x u e He Hu.
-  induction He.
-  - Case "lc_var_f".
-    simpl.
-    destruct (x0 == x).
-      auto.
-      auto.
-  - Case "lc_abs".
-    simpl.
-    eapply lc_abs.
-    intros x0.
-    rewrite subst_var.
-    apply H0.
-Admitted.
-
-(** Here we are stuck. We don't know that [x0] is not equal to [x],
-    which is a preconduction for [subst_var].
-
-    The solution is to prove an alternative introduction rule for
-    local closure for abstractions.  In the current rule, we need
-    to show that the body of the abstraction is locally closed,
-    no matter what variable we choose for the binder.
-
-
-<<
-  | lc_abs : forall e,
-      (forall x:var, lc_exp (open e x)) ->
-      lc_exp (abs e)
->>
-
-    An easier to use lemma, requires us to only show that the body
-    of the abstraction is locally closed for a *single* variable.
-*)
-Lemma lc_abs_exists : forall (x : var) e,
-      lc_exp (e ^ x) ->
-      lc_exp (abs e).
-Admitted.
-
-(* With this addition, we can complete the proof of subst_lc. *)
-
-Lemma subst_exp_lc_exp : forall (x : var) u e,
-  lc_exp e ->
-  lc_exp u ->
-  lc_exp ([x ~> u] e).
-Proof.
-  intros x u e He Hu.
-  induction He.
-  - Case "lc_var_f".
-    simpl. default_simp.
-  - Case "lc_abs".
-    simpl.
-    pick fresh x0 for {{x}}.  (* make sure that x0 <> x *)
-    eapply (lc_abs_exists x0).
-    rewrite subst_var; auto.
-  - Case "lc_app".
-    default_simp.
-Qed.
 
 
 (*************************************************************************)
@@ -276,6 +20,8 @@ Qed.
 (** We represent contexts as association lists (lists of pairs of
     keys and values) whose keys are [atom]s.
 *)
+
+(* FULL *)
 
 (** For STLC, contexts bind [atom]s to [typ]s.  We define an
     abbreviation [ctx] for the type of these contexts.
@@ -305,6 +51,8 @@ Qed.
     contexts to the right.
 *)
 
+(* /FULL *)
+
 Lemma append_assoc_demo : forall (E0 E1 E2 E3:ctx),
   E0 ++ (E1 ++ E2) ++ E3 = E0 ++ E1 ++ E2 ++ E3.
 Proof.
@@ -314,6 +62,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* FULL *)
 (** To make contexts easy to read, instead of building them from
     [nil] and [cons], we prefer to build them from the following
     components:
@@ -330,6 +79,7 @@ Qed.
     to the right, removes extraneous nils converts cons to singleton
     lists with an append.
 *)
+(* /FULL *)
 
 Lemma simpl_env_demo : forall (x y:atom) (T1 T2:typ) (E F:ctx),
    ((x ~ T1) ++ nil) ++ (y,T2) :: (nil ++ E) ++ F =
@@ -429,34 +179,36 @@ Ltac gather_atoms ::=
 
 *)
 
-
-(** *** Example
-
-    The tactic [(pick fresh x and apply H)] applies a rule [H] that is
-    defined using cofinite quantification.  It automatically
-    instantiates the finite set of atoms to exclude using
-    [gather_atoms].
-
-    Below, we reprove [subst_lc_c] using [(pick fresh and apply)].
-    Step through the proof below to see how [(pick fresh and apply)]
-    works.
-*)
-
-
-
 (*************************************************************************)
-(** * Typing relation *)
+(** * Typing relation and cofinite quantification *)
 (*************************************************************************)
 
-(** The definition of the typing relation is straightforward.  In
-    order to ensure that the relation holds for only well-formed
-    contexts, we check in the [typing_var] case that the
-    context is [uniq].  The structure of typing derivations
-    implicitly ensures that the relation holds only for locally closed
-    expressions.
+(** The typing relation in the STLC definition states the typing rule for
+    abstractions in a particular way.
 
-    Finally, note the use of cofinite quantification in
-    the [typing_abs] case.
+<<
+typing_abs
+     : forall (L : atoms) (G : ctx) (T1 : typ) (e : exp) (T2 : typ),
+       (forall x : atom,
+        x `notin` L -> typing ([(x, T1)] ++ G) (open e (var_f x)) T2) ->
+       typing G (abs e) (typ_arrow T1 T2)
+>>
+
+   To show that abstractions are well-typed, we must show that the body
+   of the abstraction is well-typed for any choice of variable, except
+   those from some unspecified set `L`.
+
+   This type of rule differs from the quantification in the
+   [lc_abs] rule (which does not restrict the variables at all) or
+   the [lc_abs_exists] version (which only applies for one particular
+   variable. We call this version "co-finite" quantification.
+
+   To see why this version is necessary, we will start with a more
+   traditional version of the rules that only uses a single variable
+   in the abs rule and then see what goes wrong.
+   (We say that the [typing_e] judgement below uses "exists-fresh"
+   quantification in the abs rule.)
+
 *)
 
 Inductive typing_e : ctx -> exp -> typ -> Prop :=
@@ -465,23 +217,18 @@ Inductive typing_e : ctx -> exp -> typ -> Prop :=
       binds x T E ->
       typing_e E (var_f x) T
   | typing_e_abs : forall x E e T1 T2,
-      x `notin` dom E ->
+      x `notin` dom E \u fv_exp e ->
       typing_e ((x ~ T1) ++ E) (e ^ x) T2 ->
       typing_e E (abs e) (typ_arrow T1 T2)
   | typing_e_app : forall E e1 e2 T1 T2,
       typing_e E e1 (typ_arrow T1 T2) ->
       typing_e E e2 T1 ->
       typing_e E (app e1 e2) T2.
-
-(** We add the constructors of the typing relation as hints to be used
-    by the [auto] and [eauto] tactics.
-*)
-
 Hint Constructors typing_e.
 
 
 (*************************************************************************)
-(** * Weakening and CoFinite quantification *)
+(** * Weakening  *)
 (*************************************************************************)
 
 (** Weakening states that if an expression is typeable in some
@@ -594,11 +341,8 @@ Print typing_abs.
     closure judgement, the induction hypotheses is not strong enough in the
     [abs] case.
 
-    However, this time, we take a slightly different solution. Instead of
-    quantifying over all variables that are fresh for all but a known and
-    fixed set of atoms, we quantify over all variabels that are fresh for all
-    but some, unknown set of atoms.
-
+    However, this time, we take a slightly different solution, with the
+    cofinite quantification of the [typing_abs] rule.
 
 <<
 | typing_abs :
@@ -607,8 +351,8 @@ Print typing_abs.
     typing (abs e) (typ_arrow T1 T2) >>
 >>
 
-   We call this "cofinite quantification". The advantage of this definition
-   is that it is easier to derive the "exists-fresh" version of the rule
+   The advantage of this definition is that it is easier to derive
+   the "exists-fresh" version of the rule
    [typing_e_abs] as a lemma, than the version we used in [lc_exp].
    (See below, we prove this lemma after we show substitution.) At the same
    time, this version of the rule is sufficiently expressive to complete
@@ -692,7 +436,6 @@ Proof.
   rewrite_env (nil ++ F ++ E).
   apply typing_weakening_strengthened; auto.
 Qed.
-
 
 
 
@@ -879,6 +622,7 @@ Qed. (* /ADMITTED *)
 
 Lemma step_lc_exp1 : forall e1 e2, step e1 e2 -> lc_exp e1.
 Proof. induction 1; auto. Qed.
+
 Lemma step_lc_exp2 : forall e1 e2, step e1 e2 -> lc_exp e2.
 Proof. induction 1; auto.
        - pick fresh x.
@@ -984,7 +728,7 @@ Qed. (* /ADMITTED *)
 
        - Use [inversion] to rule out impossible cases.
 
-       - The lemma [typing_to_lc_c] will be useful for reasoning
+       - The lemma [typing_to_lc] will be useful for reasoning
          about local closure.
 
        - In the [typing_app] case:
@@ -1080,7 +824,7 @@ Qed.
 *)
 Lemma typing_rename : forall (x y : atom) E e T1 T2,
   x `notin` fv_exp e ->
-  y `notin` dom E    ->
+  y `notin` dom E ->
   typing ((x ~ T1) ++ E) (e ^ x) T2 ->
   typing ((y ~ T1) ++ E) (e ^ y) T2.
 Proof.
@@ -1105,7 +849,7 @@ Qed.
 
 
 (*************************************************************************)
-(** * Exists-Fresh Definitions *)
+(** * Exists-Fresh Definition *)
 (*************************************************************************)
 
 (* The use of cofinite quantification may make some people worry that we
@@ -1114,7 +858,7 @@ Qed.
    version. *)
 
 Lemma typing_abs_exists : forall E e T1 T2 (x : atom),
-      x `notin` fv_exp e ->
+      x `notin` dom E \u fv_exp e ->
       typing ((x ~ T1) ++ E) (e ^ x) T2 ->
       typing E (abs e) (typ_arrow T1 T2).
 Proof.
@@ -1124,17 +868,44 @@ Proof.
   apply typing_rename with (x:=x); auto.
 Qed.
 
-(***********************************************************)
 
-(* We also want a property that states that the free variables of well-typed
-   terms are contained within the domain of their typing contexts. *)
+
+
+Lemma exists_cofinite : forall E e T,
+    typing_e E e T -> typing E e T.
+Proof.
+  intros.
+  induction H; eauto.
+  eapply typing_abs_exists with (x:=x); eauto.
+Qed.
+
+Lemma cofinite_exists : forall G e T,
+    typing G e T -> typing_e G e T.
+Proof.
+  intros. induction H; eauto.
+  pick fresh x.
+  eapply typing_e_abs with (x:=x); eauto.
+Qed.
+
+(***********************************************************************)
+(** * fv_in_dom *)
+(***********************************************************************)
+
+(** *** Exercise [fv_in_dom]
+
+   We also want a property that states that the free variables of well-typed
+   terms are contained within the domain of their typing contexts.
+
+ *)
 Lemma fv_in_dom : forall G e T,
     typing G e T -> fv_exp e [<=] dom G.
 Proof.
+  (* ADMITTED *)
   intros G e T H.
   induction H; simpl.
   - Case "typing_var".
     apply binds_In in H0.
+    (* TODO: why doesn't fsetdec work here? *)
     unfold AtomSetImpl.Subset.
     intros y Iny.
     assert (y = x). fsetdec. subst.
@@ -1148,4 +919,4 @@ Proof.
         eapply fv_exp_open_exp_wrt_exp_lower.
     fsetdec.
   - fsetdec.
-Qed.
+Qed. (* /ADMITTED *)
