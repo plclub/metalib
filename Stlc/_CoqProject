@@ -9,6 +9,8 @@ Lec2.v
 Lec2_short.v
 Lec2_full.v
 Lec2_sol.v
+Nominal_full.v
+Nominal_sol.v
 Nominal.v
 Connect.v
 Stlc.v

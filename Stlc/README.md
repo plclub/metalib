@@ -3,7 +3,7 @@ lambda calculus in Coq.
 
 CONTENTS
 
-  Definitions.v     - Definition of STLC using locally nameless
+  Definitions.v     - Specification of STLC using locally nameless
                       representation (LN)
   Lec1\_full.v      - First set of lecture notes, with exercises
                       about LN
