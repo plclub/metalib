@@ -56,8 +56,9 @@ Definition decode (c:conf) : exp  :=
   | (h,e,s) => apply_stack h s (apply_heap h (nom_to_exp e))
   end.
 
+
 (***********************************************************************)
-(** Demo: connecting free variable functions.                          *)
+(** * Demo: connecting free variable functions.                          *)
 (***********************************************************************)
 
 (** Here is the first result about our decoding: that the two free
@@ -176,16 +177,37 @@ Proof.
 Qed.
 
 (***********************************************************************)
-(** Scoped heaps                                                       *)
+(** * Stacks as evaluation contexts                                    *)
 (***********************************************************************)
 
+(** Here is a quick lemma that uses the properties defined above.
+    It shows that the stack does behave like an evaluation context,
+    lifting a small-step reduction to a larger term.
+
+    Which properties above does this proof implicitly rely on?
+ *)
 
 
+Lemma apply_stack_cong : forall s h e e',
+    step e e' ->
+    step (apply_stack h s e) (apply_stack h s e').
+Proof.
+  induction s; intros; try destruct a; simpl in *; auto with lngen.
+Qed.
 
-(* Next, we define when a heap is *well-scoped*.  well-scoped heaps
-   behave "telescopically".  Each binding (x,e) added to the heap is for
-   a unique name x and the free variables of e are bound in the remainder
-   of the heap.  *)
+
+(***********************************************************************)
+(** * Scoped heaps                                                     *)
+(***********************************************************************)
+
+(** Next, we define when a heap is *well-scoped*.  Well-scoped heaps
+    behave "telescopically".  Each binding (x,e) added to the heap is for
+    a unique name x and the free variables of e are bound in the
+    remainder of the heap.
+
+    The scoping relation is parameterized by [D], an "ambient
+    scope". This will let us reason about the execution of the abstract
+    machine for non-closed lambda terms. *)
 
 Inductive scoped_heap (D : atoms) : heap -> Prop :=
   | scoped_nil  : scoped_heap D nil
@@ -196,6 +218,18 @@ Inductive scoped_heap (D : atoms) : heap -> Prop :=
       scoped_heap D ((x,e)::h).
 
 
+(** Exercise [apply_heap_get]
+
+    We can use get to look up expressions in the heap. However, to know that
+    we have the right result we need to know that the heap is well-scoped, i.e.
+    that later bindings do not affect earlier ones.
+
+    State a lemma about the scoping of expressions that appear in the heap
+    and use it to finish the apply_heap_get below.
+ *)
+
+
+(* SOLUTION *)
 Lemma scoped_get : forall h D1 D2 x e,
   scoped_heap D1 h ->
   get x h = Some e ->
@@ -206,6 +240,7 @@ Proof.
   fsetdec.
   eapply IHscoped_heap; auto; fsetdec.
 Qed.
+(* /SOLUTION *)
 
 Lemma apply_heap_get :  forall h D x e,
     scoped_heap D h ->
@@ -213,17 +248,21 @@ Lemma apply_heap_get :  forall h D x e,
     apply_heap h (var_f x) = apply_heap h (nom_to_exp e).
 Proof.
   induction 1; intros; default_simp.
-  rewrite subst_exp_fresh_eq; auto.
-  rewrite H0. auto.
-  rewrite subst_exp_fresh_eq; auto.
-  rewrite scoped_get with (D2:= dom h\u D );  eauto with lngen.
-Qed.
+  - Case "x is at the current heap location".
+    rewrite subst_exp_fresh_eq; auto. fsetdec.
+  - Case "x is later in the heap".
+    rewrite subst_exp_fresh_eq; auto.
+    (* ADMITTED *)
+    rewrite scoped_get with (D2:= dom h\u D ); eauto with lngen.
+Qed. (* /ADMITTED *)
 
 (***********************************************************************)
-(* ------------------------------------------ *)
+(** * Scoped stacks                                                    *)
+(***********************************************************************)
 
-(* We also care about the free variables that can appear
-   in stacks. *)
+(** We also care about the free variables that can appear in stacks. (We
+    will use this definition to define when configurations are
+    well-scoped below.)  *)
 
 Fixpoint fv_stack s :=
   match s with
@@ -231,8 +270,13 @@ Fixpoint fv_stack s :=
   | n_app2 e :: s => fv_exp (nom_to_exp e) \u fv_stack s
   end.
 
+(** Stacks that are well-scoped can discard irrelevant bindings
+    from the heap. *)
+
+(* LATER *)
 (* TODO: how do we get inductive proofs to automatically
    rewrite with the IH? *)
+(* /LATER *)
 Lemma apply_stack_fresh_eq : forall s x e1 h ,
     x `notin` fv_stack s ->
     apply_stack ((x, e1) :: h) s = apply_stack h s.
@@ -242,22 +286,19 @@ Proof.
   rewrite IHs; auto.
 Qed.
 
-Lemma apply_stack_cong : forall s h e e',
-    step e e' ->
-    step (apply_stack h s e) (apply_stack h s e').
-Proof.
-  induction s; intros; try destruct a; simpl in *; auto with lngen.
-Qed.
-
 (***********************************************************************)
-(* ------------------------------------------ *)
+(** * Connecting "freshening" *)
+(***********************************************************************)
 
-(* Next, we show that nominal terms are aeq iff they decode
-   to the same LN terms.
 
-   The tricky part of this reasoning below is a lemma that lets us
-   convert swapping (with fresh variables) in the nominal calculus
-   to substitution in the LN representation.
+(** The abstract machine uses the nominal [swap] operation to make sure
+    that the variables in abstractions are "fresh".  To be able prove that
+    this machine implements the step relation for LN terms, we need to
+    connect this operation to a LN version of "freshening".
+
+    The [swap_spec] lemma below states that connection. If a variable [y]
+    is "fresh", then substituting with it (in the LN representation) is the
+    same as swapping with it (in the nominal representation).
 
 <<
 Lemma swap_spec : forall  n w y,
@@ -269,7 +310,12 @@ Lemma swap_spec : forall  n w y,
 
  *)
 
+(** This proof depends on the following auxiliary lemma about the
+    close operation --- that we can equivalently rename the atom that
+    we are closing with. *)
+(* LATER *)
 (* SCW: Make LNgen generate this? *)
+(* /LATER *)
 Lemma close_exp_wrt_exp_freshen : forall x y e,
     y `notin` fv_exp e ->
     close_exp_wrt_exp x e =
@@ -282,7 +328,10 @@ Proof.
   induction e; default_simp.
 Qed.
 
-
+(** One difficulty of [swap_spec] is that we cannot do induction on
+    the structure of nominal terms. Instead, we must use a size
+    based instead. That way, we will be able to call the IH on subterms
+    that have had their variables swapped. *)
 Lemma swap_spec_aux : forall m t w y,
     size t <= m ->
     y `notin` fv_exp (nom_to_exp t) ->
@@ -348,13 +397,15 @@ Proof.
 Qed.
 
 (***********************************************************************)
-(** Connection for aeq *)
+(** * Connection for alpha-equivalence                                 *)
 (***********************************************************************)
 
-(** Exercise: aeq <-> =
+(** Challenge Exercise: aeq iff =
 
     Show that alpha-equivalence for the nominal representation is definitional
-    equality for LN terms. *)
+    equality for LN terms.
+
+*)
 
 Lemma aeq_nom_to_exp : forall n1 n2, aeq n1 n2 -> nom_to_exp n1 = nom_to_exp n2.
 Proof.
@@ -366,6 +417,8 @@ Proof.
     rewrite swap_spec; auto.
     congruence.
 Qed. (* /ADMITTED *)
+
+Hint Rewrite subst_exp_open_exp_wrt_exp : lngen.
 
 Lemma nom_to_exp_eq_aeq : forall n1 n2, nom_to_exp n1 = nom_to_exp n2 -> aeq n1 n2.
 Proof.
@@ -392,7 +445,8 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (***********************************************************************)
-
+(** * SIMULATION                                                       *)
+(***********************************************************************)
 
 Inductive scoped_conf : atoms -> conf -> Prop :=
   scoped_conf_witness : forall D h e s,
@@ -400,7 +454,6 @@ Inductive scoped_conf : atoms -> conf -> Prop :=
     fv_exp (nom_to_exp e) [<=] dom h \u D ->
     fv_stack s [<=] dom h \u D  ->
     scoped_conf D (h,e,s).
-
 
 (* Could be zero or one steps! *)
 Lemma simulate_step : forall D h e s h' e' s' ,
@@ -461,13 +514,16 @@ Proof.
       auto.
 Qed.
 
-(***********************************************************************)
+(** Exercise [simulate_done]
+
+    Show that if the machine says [Done] then the LN term is a value.
+*)
 
 Lemma simulate_done : forall D h e s,
     machine_step (dom h \u D) (h,e,s) = Done _ ->
     scoped_conf D (h,e,s) ->
     is_value (nom_to_exp e).
-Proof.
+Proof. (* ADMITTED *)
   intros.
   inversion H0; subst.
   simpl in *.
@@ -480,12 +536,22 @@ Proof.
        econstructor; eauto.
   - destruct e; inversion H.
     simpl in Heqb. destruct (get x h); inversion H.
-Qed.
+Qed. (* /ADMITTED *)
 
 
-(***********************************************************************)
+
+(** Challenge exercise [simulate_error]
+
+    Show that if the machine produces an error, the small step relation
+    is stuck.
+
+    This is a challenge exercise because you will need to figure out
+    at least one nontrivial auxiliary lemma.
+
+*)
 
 
+(* SOLUTION *)
 Lemma apply_heap_get_none : forall x h,
     get x h = None ->
     apply_heap h (var_f x) = var_f x.
@@ -511,12 +577,14 @@ Proof.
   pose (K := IHs h _ K2 K1). clearbody K.
   eauto.
 Qed.
+(* /SOLUTION *)
 
 Lemma simulate_error : forall D h e s,
     machine_step (dom h \u D) (h,e,s) = Error _ ->
     scoped_conf D (h,e,s) ->
     not (exists e0, step (decode (h,e,s)) e0).
 Proof.
+(* ADMITTED *)
   intros.
   simpl in *.
   destruct (isVal e) eqn:?.
@@ -534,57 +602,60 @@ Proof.
     rewrite apply_heap_get_none in STEP; auto.
     eapply no_step_stack with (e0 := var_f x); auto.
        intros [e0' SS]. inversion SS. eauto.
-Qed.
+Qed. (* /ADMITTED *)
 
 (***********************************************************************)
 
-(*
-Lemma machine_is_scoped: forall D h e s h' e' s',
-    machine_step D (h,e,s) = TakeStep _ (h',e',s') ->
-    scoped_heap D h  /\ fv_exp (nom_to_exp e)  [<=] dom h \u D /\ fv_stack s [<=] dom h ->
-    scoped_heap D h' /\ fv_exp (nom_to_exp e') [<=] dom h' \u D /\ fv_stack s' [<=] dom h'.
+Lemma machine_is_scoped: forall D h e s conf',
+    machine_step (dom h \u D) (h,e,s) = TakeStep _ conf' ->
+    scoped_conf D (h,e,s) ->
+    scoped_conf D conf'.
 Proof.
+  (* ADMITTED *)
   intros.
   simpl in H.
-  destruct H0 as [SH [SE SS]].
+  inversion H0. subst.
   destruct (isVal e) eqn:?.
   destruct s eqn:?.
   - inversion H.
   - destruct f eqn:?.
      + destruct e eqn:?; try solve [inversion H].
-       destruct (AtomSetProperties.In_dec x (dom h)).
-       ++ destruct (atom_fresh (dom h)).
+       destruct AtomSetProperties.In_dec.
+       ++ destruct atom_fresh.
           inversion H; subst; clear H.
           simpl in *.
-          split.
-            econstructor; eauto. fsetdec.
-          split.
-            assert (x <> x0). fsetdec.
-            autorewrite with lngen in SE.
-            rewrite <- swap_spec; try fsetdec.
-            rewrite fv_exp_subst_exp_upper.
-            simpl.
-            fsetdec.
-          fsetdec.
+          econstructor.
+            -- econstructor; eauto. fsetdec.
+            -- assert (x <> x0). fsetdec.
+               autorewrite with lngen in *.
+               rewrite <- swap_spec; try fsetdec.
+               rewrite fv_exp_subst_exp_upper.
+               simpl.
+               fsetdec.
+            -- simpl. fsetdec.
        ++ inversion H; subst; clear H.
           simpl in *.
           autorewrite with lngen in *.
-          repeat split; try fsetdec.
-          econstructor; eauto. fsetdec.
-          rewrite <- SE.
-          eapply FSetDecideTestCases.test_Subset_add_remove.
+          econstructor.
+          -- econstructor; eauto. fsetdec.
+          -- simpl.
+             assert ((union (add x (dom h)) D) [=] (add x (union (dom h) D))).
+             fsetdec. rewrite H.
+             rewrite <- H6.
+             eapply FSetDecideTestCases.test_Subset_add_remove.
+          -- simpl. fsetdec.
   - destruct e eqn:?; try solve [inversion H].
     destruct (get x h) eqn:?;
     inversion H; subst; clear H.
     + split. auto.
       simpl in *.
-      split. eapply scoped_get; eauto.
+      eapply scoped_get; eauto.
       fsetdec.
       auto.
     + simpl in *.
     inversion H; subst; clear H.
-    split; auto.
-    split; try fsetdec.
+    econstructor.
+    auto.
+    fsetdec.
     simpl. fsetdec.
-Qed.
-*)
+Qed. (* /ADMITTED *)
