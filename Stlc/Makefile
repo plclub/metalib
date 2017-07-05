@@ -3,7 +3,7 @@ RULESFILE = stlc-rules.tex
 GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v
 
 FULL    = Lec1 Lec2 Nominal Connect
-DISTRIB = Stlc.v Stlc_inf.v *_sol.v Definitions.v Lemmas.v README.md _CoqProject stlc.ott stlc.mng stlc.pdf
+DISTRIB = Stlc.v Stlc_inf.v *_sol.v Definitions.v Lemmas.v README.md stlc.ott stlc.mng ottalt.sty listproc.sty stlc.pdf gen.mk ../LICENSE
 
 all: coq
 
@@ -14,7 +14,8 @@ zip: $(DISTRIB) Stlc.mk stlc.pdf
 	mkdir -p Stlc
 	for f in $(FULL) ; do cp $${f}_full.v Stlc/$${f}.v ; done
 	cp $(DISTRIB) Stlc
-	cp Stlc.mk Stlc/Makefile
+	(cd Stlc; echo "-R . Stlc" > _CoqProject ; ls *.v >> _CoqProject)
+	(cd Stlc; coq_makefile -f _CoqProject > Makefile)
 	zip Stlc.zip Stlc/*
 
 zipclean:
