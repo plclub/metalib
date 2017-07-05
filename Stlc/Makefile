@@ -2,20 +2,35 @@ RULESFILE = stlc-rules.tex
 
 GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v
 
-DISTRIB = $(GENCOQ) Definitions.v Lemmas.v README.md _CoqProject stlc.ott stlc.mng stlc.pdf
+FULL    = Lec1 Lec2 Nominal Connect
+DISTRIB = Stlc.v Stlc_inf.v *_sol.v Definitions.v Lemmas.v README.md _CoqProject stlc.ott stlc.mng stlc.pdf
 
 all: coq
 
+html: coq
+	make -f Stlc.mk html
+
 zip: $(DISTRIB) Stlc.mk stlc.pdf
 	mkdir -p Stlc
+	for f in $(FULL) ; do cp $${f}_full.v Stlc/$${f}.v ; done
 	cp $(DISTRIB) Stlc
 	cp Stlc.mk Stlc/Makefile
 	zip Stlc.zip Stlc/*
 
-clean: Stlc.mk
+zipclean:
+	rm -f Stlc.zip
+	rm -rf Stlc
+
+clean: Stlc.mk paperclean zipclean
 	make -f Stlc.mk clean
+	rm -f Stlc.mk
+	rm -f *.cmi *.cmo coqsplit
+
+
+
 
 coq: $(GENCOQ) Stlc.mk
+	rm -rf Stlc
 	make -f Stlc.mk
 
 Stlc.mk:
@@ -58,7 +73,7 @@ METALIB.FIX_%:
 	sed '1d' $*.v > __TMP__; mv __TMP__ $*.v
 
 paperclean:
-	rm -if *-rules.tex $(TOP).tex *.log ./*~ *.aux $(PDFS) *.bbl *.blg *.fdb_latexmk *.fls *.out
+	rm -if *-rules.tex $(TOP).tex *.log ./*~ *.aux $(PDFS) *.bbl *.blg *.fdb_latexmk *.fls *.out *.nav
 
 coqsplit: coqsplit.ml
 	ocamlc.opt coqsplit.ml -o coqsplit

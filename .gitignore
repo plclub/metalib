@@ -6,3 +6,5 @@
 *.bak
 CoqSrc.mk
 _CoqProject
+*_full.v
+*_sol.v

@@ -1,3 +1,17 @@
+(*************************************************************************)
+(** * Definition of STLC *)
+(*************************************************************************)
+
+(** This file containes all of the definitions for a locally-nameless
+    representation of a Curry-Style simply-typed lambda calculus.
+
+    This file was generated via Ott from `stlc.ott` and then edited to
+    include explanation about the definitions. As a result, it is gathers
+    all of the STLC definitions in one place, but the associated exercises
+    are found elsewhere in the tutorial.  You'll want to refer back to
+    this file as you progress through the rest of the material. *)
+
+
 Require Import Metalib.Metatheory.
 
 (*************************************************************************)
@@ -44,14 +58,13 @@ Inductive exp : Set :=  (*r expressions *)
     metric---all recursive calls in this definition are made to arguments that
     are structurally smaller than [e].
 
-    Note also that [subst_exp] uses [x == z] for decidable equality.  This
+    Note also that [subst_exp] uses [x == y] for decidable equality.  This
     operation is defined in the Metatheory library.  *)
 
-(** substitutions *)
 Fixpoint subst_exp (u:exp) (y:var) (e:exp) {struct e} : exp :=
   match e with
   | (var_b n)   => var_b n
-  | (var_f x)   => (if eq_var x y then u else (var_f x))
+  | (var_f x)   => (if x == y then u else (var_f x))
   | (abs e1)    => abs (subst_exp u y e1)
   | (app e1 e2) => app (subst_exp u y e1) (subst_exp u y e2)
 end.
@@ -67,18 +80,17 @@ end.
     particular, this makes the [abs] case simple.
 *)
 
-(** free variables *)
 Fixpoint fv_exp (e_5:exp) : vars :=
   match e_5 with
-  | (var_b nat) => {}
-  | (var_f x) => {{x}}
-  | (abs e) => (fv_exp e)
-  | (app e1 e2) => (fv_exp e1) \u (fv_exp e2)
+  | (var_b nat)   => {}
+  | (var_f x)   => {{x}}
+  | (abs e)     => fv_exp e
+  | (app e1 e2) => fv_exp e1 \u fv_exp e2
 end.
 
-(** The type [vars] represents a finite set of elements of type [atom].  The
-    notations for these finite sets is also defined in the Metatheory library.
-*)
+(** The type [vars] represents a finite set of elements of type [atom].
+    The notations for the finite set definitions (empty set `{}`, singleton
+    `{{x}}` and union `\u`) is also defined in the Metatheory library.  *)
 
 
 
@@ -100,14 +112,11 @@ end.
 
     We do not assume that zero is the only unbound index in the term.
     Consequently, we must substract one when we encounter other unbound
-    indices.
+    indices (i.e. the [inright] case).
 
     However, we do assume that the argument [u] is locally closed.  This
     assumption simplifies the implementation since we do not need to shift
-    indices in [u] when passing under a binder.
-
-    There is no need to worry about variable capture because bound variables
-    are indices.  *)
+    indices in [u] when passing under a binder. *)
 
 Fixpoint open_exp_wrt_exp_rec (k:nat) (u:exp) (e:exp) {struct e}: exp :=
   match e with
@@ -126,6 +135,25 @@ end.
 Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
 
 
+(*************************************************************************)
+(** * Notations *)
+(*************************************************************************)
+
+
+(** Many common applications of opening replace index zero with an
+    expression or variable.  The following definition provides a
+    convenient shorthand for such uses.  Note that the order of
+    arguments is switched relative to the definition above.  For
+    example, [(open e x)] can be read as "substitute the variable [x]
+    for index [0] in [e]" and "open [e] with the variable [x]."
+*)
+
+Module StlcNotations.
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
+Notation "e ^ x"        := (open_exp_wrt_exp e (var_f x)).
+End StlcNotations.
+Import StlcNotations.
 
 (*************************************************************************)
 (** * Local closure *)
@@ -147,7 +175,7 @@ Inductive lc_exp : exp -> Prop :=
  | lc_var_f : forall (x:var),
      lc_exp (var_f x)
  | lc_abs : forall (e:exp),
-      (forall x , lc_exp (open_exp_wrt_exp e (var_f x)))  ->
+      (forall x , lc_exp (open e (var_f x)))  ->
      lc_exp (abs e)
  | lc_app : forall (e1 e2:exp),
      lc_exp e1 ->
@@ -156,22 +184,21 @@ Inductive lc_exp : exp -> Prop :=
 
 
 (*************************************************************************)
-(** * Typing environments *)
+(** * Typing contexts *)
 (*************************************************************************)
 
-(** We represent environments as association lists (lists of pairs of
+(** We represent typing contexts as association lists (lists of pairs of
     keys and values) whose keys are [atom]s.
 *)
 
 Definition ctx : Set := list (atom * typ).
 
-(** For STLC, environments bind [atom]s to [typ]s.  We define an abbreviation
-    [ctx] for the type of these environments.
+(** For STLC, contexts bind [atom]s to [typ]s.
 
     Lists are defined in Coq's standard library, with the constructors [nil]
     and [cons].  The list library includes the [::] notation for cons as well
     as standard list operations such as append, map, and fold. The infix
-    operation "++" is list append.
+    operation [++] is list append.
 
     The Metatheory library extends this reasoning by instantiating the
     AssocList library to provide support for association lists whose keys are
@@ -196,17 +223,13 @@ Definition ctx : Set := list (atom * typ).
     the [typing_abs] case.
 *)
 
-
-(** definitions *)
-
-(* defns JTyping *)
 Inductive typing : ctx -> exp -> typ -> Prop :=
  | typing_var : forall (G:ctx) (x:var) (T:typ),
      uniq G ->
      binds x T G  ->
      typing G (var_f x) T
  | typing_abs : forall (L:vars) (G:ctx) (T1:typ) (e:exp) (T2:typ),
-     (forall x , x \notin L -> typing ((x ~ T1) ++ G) (open_exp_wrt_exp e (var_f x)) T2)  ->
+     (forall x , x \notin L -> typing ((x ~ T1) ++ G) (e ^ x) T2)  ->
      typing G (abs e) (typ_arrow T1 T2)
  | typing_app : forall (G:ctx) (e1 e2:exp) (T2 T1:typ),
      typing G e1 (typ_arrow T1 T2) ->
@@ -237,7 +260,7 @@ Inductive step : exp -> exp -> Prop :=
  | step_beta : forall (e1 e2:exp),
      lc_exp (abs e1) ->
      lc_exp e2 ->
-     step (app  (abs e1) e2)  (open_exp_wrt_exp  e1 e2)
+     step (app  (abs e1) e2)  (open e1 e2)
  | step_app : forall (e1 e2 e1':exp),
      lc_exp e2 ->
      step e1 e1' ->
@@ -245,22 +268,3 @@ Inductive step : exp -> exp -> Prop :=
 
 
 Hint Constructors typing step lc_exp.
-
-(*************************************************************************)
-(** * Notations *)
-(*************************************************************************)
-
-
-(** Many common applications of opening replace index zero with an
-    expression or variable.  The following definition provides a
-    convenient shorthand for such uses.  Note that the order of
-    arguments is switched relative to the definition above.  For
-    example, [(open e x)] can be read as "substitute the variable [x]
-    for index [0] in [e]" and "open [e] with the variable [x]."
-*)
-
-Module StlcNotations.
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
-Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
-Notation "e ^ x"    := (open_exp_wrt_exp e (var_f x)).
-End StlcNotations.

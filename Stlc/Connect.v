@@ -1,6 +1,5 @@
 (***********************************************************************)
-(** The nominal abstract machine implements the LN small-step
-    operational semantics. *)
+(**  * Connecting nominal and LN semantics *)
 (***********************************************************************)
 
 (** Our final goal is to show that the abstract nominal machine
@@ -12,7 +11,7 @@ Require Import Metalib.Metatheory.
 Require Import Stlc.Definitions.
 Require Import Stlc.Lemmas.
 
-Require Import Stlc.Nominal_sol.
+Require Import Stlc.Nominal.
 
 Import StlcNotations.
 

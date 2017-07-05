@@ -1,10 +1,10 @@
 
 (*************************************************************************)
-(** The simply-typed lambda calculus in Coq. *)
+(** * The simply-typed lambda calculus in Coq. *)
 (*************************************************************************)
 
 
-(* First, we import a number of definitions from the Metatheory library (see
+(** First, we import a number of definitions from the Metatheory library (see
     Metatheory.v).  The following command makes those definitions available in
     the rest of this file.
 
@@ -15,48 +15,50 @@
 *)
 Require Import Metalib.Metatheory.
 
-(* Next, we import the definitions of the simply-typed lambda calculus.
-   If you haven't read this file yet, you should do so now. *)
+(** Next, we import the definitions of the simply-typed lambda calculus.
+    If you haven't skimmed this file yet, you should do so now. You don't
+    need to understand everything in the file at first, but you will need to
+    refer back to it in the material below. *)
 Require Import Stlc.Definitions.
 
-(* And some notations (defined in Stlc.Definitions), but not automatically
-   brought into scope. *)
+(** And some notations (defined in `Stlc.Definitions`), but not automatically
+    brought into scope. *)
 Import StlcNotations.
 
-(* Some sample variable names to play with *)
+(** For the examples below, we introduce some sample variable names to
+    play with. *)
 Parameter X : var.
 Parameter Y : var.
 Parameter Z : var.
+Parameter FrXY : X <> Y.
+Parameter FrXZ : X <> Z.
+Parameter FrYZ : Y <> Z.
 
 (*************************************************************************)
 (** * Encoding terms in STLC *)
 (*************************************************************************)
 
 (* FULL *)
-(*
-  We start with examples of encodings in STLC.
+(** We start with examples of encodings in STLC.
 
-  For example, we can encode the expression (\x. Y x) as below.
-  Because "Y" is free variable in this term, we need to assume an
-  atom for this name.
-*)
+    For example, we can encode the expression (\x. Y x) as below.  Because "Y"
+  is free variable in this term, we need to assume an atom for this name.  *)
 Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
 
-(**
-    Below is another example: the encoding of (\x. \y. (y x)).
+(**  Here is another example: the encoding of (\x. \y. (y x)).
 *)
 
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 (* /FULL *)
 
-(** Exercise: Uncomment and then complete the definitions of the following
-	 lambda calculus terms using the locally nameless representation.
+(** Exercise: Define the following lambda calculus terms using the locally
+	 nameless representation.
 
-       "two"     :    \s. \z. s (s z)
+       "two" : \s. \z. s (s z)
 
-       "COMB_K"  :    \x. \y. x
+       "COMB_K" : \x. \y. x
 
-       "COMB_S"  :    \x. \y. \z. x z (y z)
+       "COMB_S" : \x. \y. \z. x z (y z)
 
 *)
 
@@ -194,7 +196,7 @@ Qed. (* /ADMITTED *)
     variable names.
  *)
 
-(* Demo [fsetdec]
+(** Demo [fsetdec]
 
    The tactic [fsetdec] solves a certain class of propositions
    involving finite sets. See the documentation in [FSetWeakDecide]
@@ -253,10 +255,10 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (*************************************************************************)
-(* More Exercises                                                        *)
+(** More Exercises                                                        *)
 (*************************************************************************)
 
-(*
+(**
    Step through the proof that free variables are not introduced by substitution.
 
    This proof actually is very automatable ([simpl in *; auto.] takes care of
@@ -294,7 +296,7 @@ Proof.
     assumption.
 Qed.
 
-(* Now prove the following properties of substitution and fv *)
+(** Now prove the following properties of substitution and fv *)
 
 (** Exercise [subst_exp_fresh_same] *)
 
@@ -509,11 +511,11 @@ Qed. (* /ADMITTED *)
 (** Forall quantification in [lc_exp].                                   *)
 (*************************************************************************)
 
-(* Let's look more closely at lc_abs and lc_exp_ind. *)
+(** Let's look more closely at lc_abs and lc_exp_ind. *)
 
 Check lc_exp_ind.
 
-(* The induction principle for the lc_exp relation is particularly strong
+(** The induction principle for the lc_exp relation is particularly strong
    in the abs case.
 
 <<
@@ -535,7 +537,7 @@ Check lc_exp_ind.
 
 Check lc_abs.
 
-(* However, on the other hand, when we show that an abstraction is locally
+(** However, on the other hand, when we show that an abstraction is locally
    closed, we need to show that its body is locally closed, when
    opened by any variable.
 
