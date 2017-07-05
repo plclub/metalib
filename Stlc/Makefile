@@ -1,8 +1,16 @@
 RULESFILE = stlc-rules.tex
 
-GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v Connect.v
+GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v
+
+DISTRIB = $(GENCOQ) Definitions.v Lemmas.v README.md _CoqProject stlc.ott stlc.mng stlc.pdf
 
 all: coq
+
+zip: $(DISTRIB) Stlc.mk stlc.pdf
+	mkdir -p Stlc
+	cp $(DISTRIB) Stlc
+	cp Stlc.mk Stlc/Makefile
+	zip Stlc.zip Stlc/*
 
 clean: Stlc.mk
 	make -f Stlc.mk clean

@@ -391,7 +391,7 @@ Definition nominal_induction
   nominal_induction_size L (size t) t ltac:(auto) P VAR APP ABS.
 
 (* LATER *)
-
+(*
 Definition extract {L} (m : {x : atom | x `notin` L}) : atom :=
   match m with
   | exist _ x _ => x
@@ -440,59 +440,50 @@ Proof.
   destruct subst_rel_exists.
   inversion s.
 Admitted.
+*)
 
+(* /LATER *)
 
-Program Fixpoint subst_rec (n:nat) (t:n_exp) (pf : size t <= n)
-        (u :n_exp) (x:atom)  : n_exp :=
+(** We also need to use size to define capture avoiding substitution. Because
+    we sometimes swap the name of the bound variable, this function is not
+    structurally recursive. *)
+
+Fixpoint subst_rec (n:nat) (t:n_exp) (u :n_exp) (x:atom)  : n_exp :=
   match n with
-  | 0 => _
+  | 0 => t
   | S m => match t with
           | n_var y => if (x == y) then u else t
           | n_abs y t1 => if (x == y) then t
                         else let (z,_) := atom_fresh (fv_nom u \u fv_nom t) in
-                             n_abs z (subst_rec m (swap y z t1) _ u x)
-          | n_app t1 t2 => n_app (subst_rec m t1 _ u x) (subst_rec m t2 _ u x)
+                             n_abs z (subst_rec m (swap y z t1) u x)
+          | n_app t1 t2 => n_app (subst_rec m t1 u x) (subst_rec m t2 u x)
           end
   end.
-Next Obligation.
-rewrite swap_size_eq. simpl in *. omega.
-Defined.
-Next Obligation.
-simpl in *. omega.
-Defined.
-Next Obligation.
-simpl in *. omega.
-Defined.
-
-Lemma subst_rec_proof_irrel :
-  forall n t p1 p2 u x, subst_rec n t p1 u x = subst_rec n t p2 u x.
-Proof.
-  induction n.
-  simpl. auto.
-  simpl. destruct t; auto.
-  - intros; destruct (x0 == x); auto.
-    destruct atom_fresh; auto.
-    erewrite IHn. eauto.
-  - intros.
-    erewrite IHn with (t := t1).
-    erewrite IHn with (t := t2).
-    eauto.
-Qed.
-
-(* /LATER *)
-
-(* HIDE *)
-
-(*
-Lemma subst_rec_size_weaken :
-  forall n1 t u x (p1 : size t <= n1) (p2: size t <= size t),
-    subst_rec n1 t p1 u x = subst_rec (size t) t p2 u x.
-Proof.
-Admitted.
-
 
 Definition subst (u : n_exp) (x:atom) (t:n_exp) :=
-  subst_rec (size t) t ltac:(auto) u x.
+  subst_rec (size t) t u x.
+
+(** This lemma uses course of values induction to prove that
+    the size of the term is enough "fuel" to completely calculate
+    the substitution. *)
+Lemma subst_size : forall n (u : n_exp) (x:atom) (t:n_exp),
+    size t <= n -> subst_rec n t u x = subst_rec (size t) t u x.
+Proof.
+  intro n. eapply (lt_wf_ind n). clear n.
+  intros n IH u x t SZ.
+  destruct t; simpl in *; destruct n; try omega.
+  - default_simp.
+  - default_simp.
+    rewrite <- (swap_size_eq x0 x1).
+    rewrite <- (swap_size_eq x0 x1) in SZ.
+    apply IH. omega. omega.
+  - simpl.
+    rewrite (IH n); try omega.
+    rewrite (IH n); try omega.
+    rewrite (IH (size t1 + size t2)); try omega.
+    rewrite (IH (size t1 + size t2)); try omega.
+    auto.
+Qed.
 
 Lemma subst_var_eq : forall u x,
     subst u x (n_var x) = u.
@@ -509,16 +500,26 @@ Lemma subst_app : forall u x t1 t2,
     subst u x (n_app t1 t2) = n_app (subst u x t1) (subst u x t2).
 Proof.
   intros. unfold subst.
-  erewrite subst_rec_proof_irrel with (t := t1).
-  erewrite subst_rec_proof_irrel with (t := t2).
-  simpl; eauto.
-  remember (le_n (size (n_app t1 t2))) as Pf1.
-  remember (le_n (size t1)) as Pf2.
-  remember (le_n (size t2)) as Pf3.
   simpl.
+  rewrite (subst_size (size t1 + size t2)).
+  rewrite (subst_size (size t1 + size t2)).
+  auto.
+  omega.
+  omega.
+Qed.
 
-  repeat f_equal. f_equal.
+Lemma subst_abs : forall u x y t1,
+    subst u x (n_abs y t1) =
+       if (x == y) then (n_abs y t1)
+       else let (z,_) := atom_fresh (fv_nom u \u fv_nom (n_abs y t1)) in
+       n_abs z (subst u x (swap y z t1)).
+Proof.
+  intros. unfold subst. default_simp.
+  rewrite swap_size_eq. auto.
+Qed.
 
+(* HIDE *)
+(*
 Definition impossible {A:Type} (t:n_exp)(pf: size t <= 0) : A.
 destruct t; simpl in pf; omega.
 Defined.

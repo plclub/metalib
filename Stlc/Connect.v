@@ -12,7 +12,7 @@ Require Import Metalib.Metatheory.
 Require Import Stlc.Definitions.
 Require Import Stlc.Lemmas.
 
-Require Import Stlc.Nominal.
+Require Import Stlc.Nominal_sol.
 
 Import StlcNotations.
 

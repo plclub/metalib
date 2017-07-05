@@ -10,7 +10,7 @@ Import StlcNotations.
 
 Require Import Stlc.Lemmas.
 
-Require Import Stlc.Lec1.
+Require Import Stlc.Lec1_sol.
 
 
 (*************************************************************************)

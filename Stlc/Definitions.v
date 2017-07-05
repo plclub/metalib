@@ -190,7 +190,9 @@ Definition ctx : Set := list (atom * typ).
     environments, we check in the [typing_var] case that the
     environment is [uniq].  The structure of typing derivations
     implicitly ensures that the relation holds only for locally closed
-    expressions.  Finally, note the use of cofinite quantification in
+    expressions.
+
+    Finally, note the use of cofinite quantification in
     the [typing_abs] case.
 *)
 
@@ -256,7 +258,6 @@ Hint Constructors typing step lc_exp.
     example, [(open e x)] can be read as "substitute the variable [x]
     for index [0] in [e]" and "open [e] with the variable [x]."
 *)
-
 
 Module StlcNotations.
 Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
