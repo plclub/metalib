@@ -4,6 +4,8 @@ DONE
 
 * merge metalib 8.6 into master
 * recover STLCsol as simple, standalone tutorial
+* Better definition of get in metalib
+* add lngen autorewrites to default_simp
 
 SOONER
 * make coqdoc output readable (sf-like)
@@ -21,19 +23,20 @@ NOPE
 LATER
 
 * LNgen generate close_freshen
-* Company-coq and completion from other modules
-* Better definition of get in metalib (plus theory about get?)
 
-* faster default_simp? (or slower: add autorewrite with hint DB?)
+* Company-coq and completion from other modules
+
+* theory of get
+
 * can replace apply_heap/apply_stack/fv_stack with fold?
 
 * patch Ott for metalib namespace (more generally, allow embeds at beginning
   of file.)
 
-
 * merge branches for LNgen into master (make old releases?)
 
 * edit Ott to produce good nominal output
+
 * patch Ott for fset based fv function
 
 * Type classes ??? for LNgen

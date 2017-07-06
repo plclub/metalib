@@ -17,10 +17,7 @@ Require Import Stlc.Lec1.
 (*************************************************************************)
 
 (** We represent contexts as association lists (lists of pairs of
-    keys and values) whose keys are [atom]s.
-*)
-
-(* FULL *)
+    keys and values) whose keys are [atom]s.   *)
 
 (** For STLC, contexts bind [atom]s to [typ]s.  We define an
     abbreviation [ctx] for the type of these contexts.
@@ -35,8 +32,7 @@ Require Import Stlc.Lec1.
     keys are [atom]s.  Everything in this library is polymorphic over
     the type of objects bound in the context.  Look in AssocList
     for additional details about the functions and predicates that we
-    mention below.
-*)
+    mention below.  *)
 
 (** Context equality *)
 
@@ -47,10 +43,7 @@ Require Import Stlc.Lec1.
     denote the same context even though they are not equal.
 
     The tactic [simpl_env] reassociates all concatenations of
-    contexts to the right.
-*)
-
-(* /FULL *)
+    contexts to the right.  *)
 
 Lemma append_assoc_demo : forall (E0 E1 E2 E3:ctx),
   E0 ++ (E1 ++ E2) ++ E3 = E0 ++ E1 ++ E2 ++ E3.
@@ -61,7 +54,6 @@ Proof.
   reflexivity.
 Qed.
 
-(* FULL *)
 (** To make contexts easy to read, instead of building them from
     [nil] and [cons], we prefer to build them from the following
     components:
@@ -373,7 +365,8 @@ Print typing_abs.
          hypothesis, but the [apply] tactic may be unable to unify
          things as you might expect.
 
-           -- Recall the [pick fresh and apply] tactic.
+           -- You'll need to specify the set to avoid with
+              (L := dom (G0 ++ F ++ E) \u L)).
 
            -- In order to apply the induction hypothesis, use
               [rewrite_env] to reassociate the list operations.
@@ -400,12 +393,13 @@ Proof.
   generalize dependent G.
   induction H; intros G0 Eq Uniq; subst.
  (* ADMITTED *)
-  Case "typing_var".
+  - Case "typing_var".
     apply typing_var.
       apply Uniq.
       apply binds_weaken. auto.
-  Case "typing_abs".
-    pick fresh x and apply typing_abs.
+  - Case "typing_abs".
+    apply typing_abs with (L := dom (G0 ++ F ++ E) \u L).
+    intros x Frx.
     rewrite_env (((x ~ T1) ++ G0) ++ F ++ E).
     apply H0.
       auto.
@@ -413,7 +407,7 @@ Proof.
       simpl_env. apply uniq_push.
         apply Uniq.
         auto.
-  Case "typing_app".
+  - Case "typing_app".
     eapply typing_app.
       eapply IHtyping1. reflexivity. apply Uniq.
       eapply IHtyping2. reflexivity. apply Uniq.
@@ -525,8 +519,6 @@ Qed. (* /ADMITTED *)
       - The [typing_abs] case follows from the induction hypothesis.
          -- Use [simpl] to simplify the substitution.
 
-          -- Recall the tactic [pick fresh and apply].
-
           -- In order to use the induction hypothesis, use
              [subst_open_var_c] to push the substitution under the
              opening operation.
@@ -548,15 +540,16 @@ Proof.
   remember (F ++ (z ~ S) ++ E) as E'.
   generalize dependent F.
   induction He.
-  Case "typing_var".
+  - Case "typing_var".
     intros F Eq.
     subst.
     eapply typing_subst_var_case. apply H0. apply H. apply Hu.
-  Case "typing_abs".
+  - Case "typing_abs".
     intros F Eq.
     subst.
     simpl.
-    pick fresh y and apply typing_abs.
+    apply typing_abs with (L := {{z}} \u L).
+    intros y Fry.
     rewrite subst_var.
     rewrite_env (((y ~ T1) ++ F) ++ E).
     apply H0.
@@ -565,7 +558,7 @@ Proof.
     (* The following subgoals are from [rewrite subst_open_var]. *)
     auto.
     eapply typing_to_lc_exp. apply Hu.
-  Case "typing_app".
+  - Case "typing_app".
     intros F Eq. subst. simpl. eapply typing_app.
       apply IHHe1. reflexivity.
       apply IHHe2. reflexivity.
@@ -771,7 +764,7 @@ Proof.
   - Case "typing_abs".
     pick fresh x.
     assert (uniq ((x ~ T1) ++ G)); auto.
-    inversion H1. auto.
+    solve_uniq.
 Qed.
 
 
@@ -848,7 +841,7 @@ Qed.
 (** ** Additional Exercises                                            *)
 (***********************************************************************)
 
-(** *** Exercise [fv_in_dom]
+(** *** Challenge Exercise [fv_in_dom]
 
    We also want a property that states that the free variables of well-typed
    terms are contained within the domain of their typing contexts.
@@ -862,11 +855,7 @@ Proof.
   induction H; simpl.
   - Case "typing_var".
     apply binds_In in H0.
-    (* TODO: why doesn't fsetdec work here? *)
-    unfold AtomSetImpl.Subset.
-    intros y Iny.
-    assert (y = x). fsetdec. subst.
-    auto.
+    fsetdec.
   - Case "typing_abs".
     pick fresh x.
     assert (Fx : fv_exp (e ^ x) [<=] dom ((x ~ T1) ++ G))
@@ -875,5 +864,6 @@ Proof.
     assert (Fy : fv_exp e [<=] fv_exp (e ^ x)) by
         eapply fv_exp_open_exp_wrt_exp_lower.
     fsetdec.
-  - fsetdec.
+  - Case "typing_app".
+    fsetdec.
 Qed. (* /ADMITTED *)
