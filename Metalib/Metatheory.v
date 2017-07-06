@@ -27,7 +27,6 @@ Notation " x  == y " := (eq_dec x y) (at level 70) : coqeqdec_scope.
 
 Open Scope coqeqdec_scope.
 
-
 (* ********************************************************************** *)
 (** * Notations for finite sets of atoms *)
 
