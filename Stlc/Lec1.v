@@ -157,18 +157,42 @@ Parameter FrYZ : Y <> Z.
 (** ** Encoding STLC terms *)
 (*************************************************************************)
 
-(* FULL *)
+
 (** We start with examples of encodings in STLC.
 
-    For example, we can encode the expression (\x. Y x) as below.  Because "Y"
-  is free variable in this term, we need to assume an atom for this name.  *)
-Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
+  For example, we can encode the expression (\x. Y x) as below. We use the
+  index 0 because it irefers to the closest abs to the bound variable
+  occurrence. *)
 
-(**  Here is another example: the encoding of (\x. \y. (y x)).
-*)
+Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
+(**                      ^                        |                   *)
+(**                      |                        |                   *)
+(**                      --------------------------                   *)
+
+
+
+(**  Here is another example: the encoding of (\x. \y. (y x)). *)
 
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
-(* /FULL *)
+(**                      ^    ^              |         |              *)
+(**                      |    |              |         |              *)
+(**                      |    ----------------         |              *)
+(**                      |                             |              *)
+(**                      -------------------------------              *)
+
+(** Finally, here is an example where the same bound variable has two
+    different indices, and the same index refers to two different
+    bound variables.
+                         \y. ((\x. (x y)) y)                          *)
+
+Definition demo_rep3 :=
+           abs (app (abs (app (var_b 0) (var_b 1))) (var_b 0)).
+(**         ^         ^              |         |           |          *)
+(**         |         |              |         |           |          *)
+(**         |         ----------------         |           |          *)
+(**         |                                  |           |          *)
+(**         ------------------------------------------------          *)
+
 
 (** *** Exercise: term representation
 
@@ -180,8 +204,6 @@ Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
        "COMB_K" : \x. \y. x
 
        "COMB_S" : \x. \y. \z. x z (y z)
-
-       "YAO"    : \y. (\x. (y x)) y
 
 *)
 
@@ -195,9 +217,6 @@ Definition COMB_K :=
 Definition COMB_S :=
    abs (abs (abs
         (app (app (var_b 2) (var_b 0)) (app (var_b 1) (var_b 0))))).
-
-Definition YAO :=
-   abs (app (abs (app (var_b 1) (var_b 0))) (var_b 0)).
 
 (* /SOLUTION *)
 

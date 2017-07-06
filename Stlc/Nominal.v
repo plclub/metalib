@@ -102,7 +102,7 @@ Hint Constructors aeq.
 (*************************************************************)
 
 
-(** Because swapping is a simpl, structurally recursive
+(** Because swapping is a simple, structurally recursive
     function, it is highly automatable using the [default_simp]
     tactic from LNgen library.
 
