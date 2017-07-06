@@ -46,7 +46,7 @@ Require Import Stlc.Lec1.
     Unfortunately, list append is associative, so two Coq expressions may
     denote the same context even though they are not equal.
 
-    The tactic [simpl_ctx] reassociates all concatenations of
+    The tactic [simpl_env] reassociates all concatenations of
     contexts to the right.
 *)
 
@@ -75,7 +75,7 @@ Qed.
 
 (** The simpl_env tactic actually puts lists built from only nil, one
     and [++] into a "normal form". This process reassociates all appends
-    to the right, removes extraneous nils converts cons to singleton
+    to the right, removes extraneous nils and converts cons to singleton
     lists with an append.
 *)
 (* /FULL *)
