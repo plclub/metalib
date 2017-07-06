@@ -10,6 +10,7 @@ Require Export Stlc.Definitions.
     In general, there is a [_rec] version of every lemma involving
     [open] and [close]. *)
 
+(* begin hide *)
 
 (* *********************************************************************** *)
 (** * Induction principles for nonterminals *)
@@ -38,6 +39,7 @@ Definition exp_mutrec :=
   fun H1 H2 H3 H4 H5 =>
   exp_rec' H1 H2 H3 H4 H5.
 
+(* end hide *)
 
 (* *********************************************************************** *)
 (** * Close *)
@@ -99,19 +101,11 @@ Definition degree_exp_wrt_exp_mutind :=
 Hint Constructors degree_exp_wrt_exp : core lngen.
 
 
-(* *********************************************************************** *)
-(** * Local closure (version in [Set], induction principles) *)
+(* begin hide *)
 
-Inductive lc_set_exp : exp -> Set :=
-  | lc_set_abs : forall e1,
-    (forall x1 : var, lc_set_exp (open_exp_wrt_exp e1 (var_f x1))) ->
-    lc_set_exp (abs e1)
-  | lc_set_var_f : forall x1,
-    lc_set_exp (var_f x1)
-  | lc_set_app : forall e1 e2,
-    lc_set_exp e1 ->
-    lc_set_exp e2 ->
-    lc_set_exp (app e1 e2).
+(* *********************************************************************** *)
+(** * Local closure (induction principles) *)
+
 
 Scheme lc_exp_ind' := Induction for lc_exp Sort Prop.
 
@@ -119,21 +113,9 @@ Definition lc_exp_mutind :=
   fun H1 H2 H3 H4 =>
   lc_exp_ind' H1 H2 H3 H4.
 
-Scheme lc_set_exp_ind' := Induction for lc_set_exp Sort Prop.
-
-Definition lc_set_exp_mutind :=
-  fun H1 H2 H3 H4 =>
-  lc_set_exp_ind' H1 H2 H3 H4.
-
-Scheme lc_set_exp_rec' := Induction for lc_set_exp Sort Set.
-
-Definition lc_set_exp_mutrec :=
-  fun H1 H2 H3 H4 =>
-  lc_set_exp_rec' H1 H2 H3 H4.
-
 Hint Constructors lc_exp : core lngen.
 
-Hint Constructors lc_set_exp : core lngen.
+(* end hide *)
 
 
 (* *********************************************************************** *)
@@ -796,90 +778,6 @@ Qed.
 
 Hint Resolve lc_body_abs_1 : lngen.
 
-(* begin hide *)
-
-Lemma lc_exp_unique_mutual :
-(forall e1 (proof2 proof3 : lc_exp e1), proof2 = proof3).
-Proof.
-apply_mutual_ind lc_exp_mutind;
-intros;
-let proof1 := fresh "proof1" in
-rename_last_into proof1; dependent destruction proof1;
-f_equal; default_simp; auto using @functional_extensionality_dep with lngen.
-Qed.
-
-(* end hide *)
-
-Lemma lc_exp_unique :
-forall e1 (proof2 proof3 : lc_exp e1), proof2 = proof3.
-Proof.
-pose proof lc_exp_unique_mutual as H; intuition eauto.
-Qed.
-
-Hint Resolve lc_exp_unique : lngen.
-
-(* begin hide *)
-
-Lemma lc_exp_of_lc_set_exp_mutual :
-(forall e1, lc_set_exp e1 -> lc_exp e1).
-Proof.
-apply_mutual_ind lc_set_exp_mutind;
-default_simp.
-Qed.
-
-(* end hide *)
-
-Lemma lc_exp_of_lc_set_exp :
-forall e1, lc_set_exp e1 -> lc_exp e1.
-Proof.
-pose proof lc_exp_of_lc_set_exp_mutual as H; intuition eauto.
-Qed.
-
-Hint Resolve lc_exp_of_lc_set_exp : lngen.
-
-(* begin hide *)
-
-Lemma lc_set_exp_of_lc_exp_size_mutual :
-forall i1,
-(forall e1,
-  size_exp e1 = i1 ->
-  lc_exp e1 ->
-  lc_set_exp e1).
-Proof.
-intros i1; pattern i1; apply lt_wf_rec;
-clear i1; intros i1 H1;
-apply_mutual_ind exp_mutrec;
-default_simp;
-try solve [assert False by default_simp; tauto];
-(* non-trivial cases *)
-constructor; default_simp;
-try first [apply lc_set_exp_of_lc_exp];
-default_simp; eapply_first_lt_hyp;
-(* instantiate the size *)
-match goal with
-  | |- _ = _ => reflexivity
-  | _ => idtac
-end;
-instantiate;
-(* everything should be easy now *)
-default_simp.
-Qed.
-
-(* end hide *)
-
-Lemma lc_set_exp_of_lc_exp :
-forall e1,
-  lc_exp e1 ->
-  lc_set_exp e1.
-Proof.
-intros e1; intros;
-pose proof (lc_set_exp_of_lc_exp_size_mutual (size_exp e1));
-intuition eauto.
-Qed.
-
-Hint Resolve lc_set_exp_of_lc_exp : lngen.
-
-
 (* *********************************************************************** *)
 (** * More theorems about [open] and [close] *)
 
@@ -1487,28 +1385,18 @@ Qed.
 Hint Resolve subst_exp_abs : lngen.
 
 (* begin hide *)
-
-Lemma subst_exp_intro_rec_mutual :
-(forall e1 x1 e2 n1,
-  x1 `notin` fv_exp e1 ->
-  open_exp_wrt_exp_rec n1 e2 e1 = subst_exp e2 x1 (open_exp_wrt_exp_rec n1 (var_f x1) e1)).
-Proof.
-apply_mutual_ind exp_mutind;
-default_simp.
-Qed.
-
-(* end hide *)
-
 Lemma subst_exp_intro_rec :
 forall e1 x1 e2 n1,
   x1 `notin` fv_exp e1 ->
   open_exp_wrt_exp_rec n1 e2 e1 = subst_exp e2 x1 (open_exp_wrt_exp_rec n1 (var_f x1) e1).
 Proof.
-pose proof subst_exp_intro_rec_mutual as H; intuition eauto.
+induction e1; default_simp.
 Qed.
 
 Hint Resolve subst_exp_intro_rec : lngen.
 Hint Rewrite subst_exp_intro_rec using solve [auto] : lngen.
+
+(* end hide *)
 
 Lemma subst_exp_intro :
 forall x1 e1 e2,

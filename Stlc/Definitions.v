@@ -149,11 +149,12 @@ Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
 *)
 
 Module StlcNotations.
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68) : exp_scope.
 Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
-Notation "e ^ x"        := (open_exp_wrt_exp e (var_f x)).
+Notation "e ^ x"        := (open_exp_wrt_exp e (var_f x)) : exp_scope.
 End StlcNotations.
 Import StlcNotations.
+Open Scope exp_scope.
 
 (*************************************************************************)
 (** * Local closure *)

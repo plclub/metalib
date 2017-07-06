@@ -1,18 +1,137 @@
+(*************************************************************************)
+(** * Language specification and variable binding *)
+(*************************************************************************)
+
+(** This tutorial demonstrates the use of the Coq proof assistant for
+    reasoning about higher-order programming languages, such as those based
+    on the lambda calculus, and their implementations. We use a
+    simply-typed lambda calculus as a running example.
+
+    Reasoning about languages with first-class functions is difficult because
+    of variable binding. In particular, there are two important
+    complications that make working with lambda-terms difficult.
+
+  - First, we would like to work up to _alpha-equivalence_. In other words, we
+    would like our reasoning about lambda terms to not depend on the names
+    that we use for free variables.
+
+    For example, we would like to show that these two terms are
+    indistinguishable to the semantics
+
+              \x.x  and  \y.y
+
+  - Second, substitution should be _capture avoiding_. When we substitute
+    terms with free variables, those free variables should never become bound
+    by the terms they are being substituted into. This means that sometimes we
+    need to rename bound variables to avoid capture. For example,
+
+            [ z ~> \x.y ](\y.z)     should be     \y1.\x.y
+*)
+
+(** ** Aproaches to variable binding *)
+
+(** Unfortunately, variable binding is an _old_ problem. The issue isn't
+    that we don't know how to solve this problem, in fact we known _many_,
+    _many_ different ways to solve this problem and they all have their
+    trade offs.  We won't include an entire taxonomy of solutions here, but
+    before we go further, I want to mention a few relevant alternatives.
+
+    - Only working with closed terms, never reasoning about equivalence
+
+    If we never have to substitute an _open_ term, then we never have to
+    worry about variable capture. We can represent binding variables in
+    lambda terms using names in a straightforward manner. This approach is
+    the simplest and side-steps the two problems shown above. For example,
+    it can be used to show type soundess, as is done in Software
+    Foundations.
+
+    However, this approach does not scale. For example, reasoning about
+    compiler optimizations requires reasoning about the equivalence of
+    transformed open terms.
+
+    - Named terms, with swapping
+
+    We can still work with named terms, even in the presence of free
+    variables, as long as we _define_ alpha equivalence and substitution
+    appropriately. There are, again, many approaches to these definitions.
+    However, the most elegant approach is inspired by Nominal Logic.
+
+    - Locally nameless representation (LN)
+
+    When working in Coq, it is convenient to use a representation that
+    makes all alpha-equivalent terms _definitionally_ equivalent. LN does
+    this while still providing an interface that is mostly similar to paper
+    proofs.
+
+Other approaches to variable binding include: de Bruijn indices, de Bruijn
+levels, weak HOAS, PHOAS, locally named, canonically named... etc. Of
+these, de Bruijn representations are by far the most commonly used
+representation in Coq.
+
+(** ** Overview *)
+
+In this tutorial, we will promote the following approach to variable
+binding.
+
+- Use a locally nameless representation to _specify_ and reason about the
+  semantics
+
+- Use a named representation to _implement_ environment-based interpreters
+  for lambda calculus terms. If binders are mostly unique, then this
+  implementation avoids additional work.
+
+- The definitions, lemmas and proofs that are needed to work with
+  lambda-calculus terms are highly automatable.
+
+
+In the first part of the tutorial, we will demonstrate the use of a locally
+nameless representation to reason about a specification of a call-by-name
+lambda calculus. We will state the operational semantics of this language
+using a small-step substitution-based inductive relation.  We will use this
+specification for metatheoretic reasoning: we will prove _preservation_ and
+_progress_.
+
+Next, we will represent the same language using a _nominal representation_
+but specific the semantics using an abstract machine. This abstract machine
+is given as a Coq function from machine configurations to machine
+configurations, and can be used in an efficient interpreter. This abstract
+machine features a heap (i.e. runtime environment for variables), so we
+will not need to define capture-avoiding substitution as part of our
+semantics.
+
+Finally, we will prove that the abstract machine implements the same
+semantics as the locally nameless based substitution semantics.
+
+(** ** Tool support *)
+
+The development of this tutorial draws from two coordinating tools that
+support working with LN representations.
+
+The Ott tool provides a direct way of generating LN language definitions
+from a simple specification language.  The file [stlc.ott] contains the
+input specification of the language of this tutorial.  [Definitions.v] is a
+commented version of the Ott output. (For comparison, the raw output is in
+[Stlc.v]).  The same specifications can also be used to produce LaTeX
+macros for typesetting language definitions, demonstrated in [stlc.pdf].
+
+
+The LNgen tool works with Ott to generate a number of lemmas and auxiliary
+definitions for working with LN terms. The file [Lemmas.v] is commented
+version of that output. (For comparison, the raw output is in
+[Stlc_inf.v].) *)
 
 (*************************************************************************)
 (** * The simply-typed lambda calculus in Coq. *)
 (*************************************************************************)
 
 
-(** First, we import a number of definitions from the Metatheory library (see
-    Metatheory.v).  The following command makes those definitions available in
-    the rest of this file.
 
-    This command will only succeed if you have already run "make" in the
-    toplevel directory to compile the Metatheory library and the tutorial
-    files.
+(** First, we import a number of definitions from the Metatheory library
+    (see Metatheory.v).  The following command makes those definitions
+    available in the rest of this file.
 
-*)
+    This command will only succeed if you have already run [make] and [make
+    install] in the Metatheory directory to compile the Metatheory library. *)
 Require Import Metalib.Metatheory.
 
 (** Next, we import the definitions of the simply-typed lambda calculus.
@@ -35,7 +154,7 @@ Parameter FrXZ : X <> Z.
 Parameter FrYZ : Y <> Z.
 
 (*************************************************************************)
-(** * Encoding terms in STLC *)
+(** ** Encoding STLC terms *)
 (*************************************************************************)
 
 (* FULL *)
@@ -51,7 +170,9 @@ Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 (* /FULL *)
 
-(** Exercise: Define the following lambda calculus terms using the locally
+(** *** Exercise: term representation
+
+    Define the following lambda calculus terms using the locally
 	 nameless representation.
 
        "two" : \s. \z. s (s z)
@@ -59,6 +180,8 @@ Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
        "COMB_K" : \x. \y. x
 
        "COMB_S" : \x. \y. \z. x z (y z)
+
+       "YAO"    : \y. (\x. (y x)) y
 
 *)
 
@@ -72,6 +195,9 @@ Definition COMB_K :=
 Definition COMB_S :=
    abs (abs (abs
         (app (app (var_b 2) (var_b 0)) (app (var_b 1) (var_b 0))))).
+
+Definition YAO :=
+   abs (app (abs (app (var_b 1) (var_b 0))) (var_b 0)).
 
 (* /SOLUTION *)
 
@@ -96,7 +222,7 @@ Definition COMB_S :=
 (* /FULL *)
 
 (*************************************************************************)
-(** * Substitution *)
+(** ** Substitution *)
 (*************************************************************************)
 
 (* FULL *)
@@ -124,6 +250,7 @@ Check (Y == Z).
     - The tactic [Case] marks cases in the proof script.
       It takes any string as its argument, and puts that string in
       the hypothesis list until the case is finished.
+      (This tactic is completely optional.)
 *)
 (* /FULL *)
 
@@ -140,7 +267,7 @@ Proof.
 Qed. (* /WORKINCLASS *)
 
 
-(** Exercise [subst_eq_var]
+(** *** Exercise [subst_eq_var]
 
     We can use almost the same proof script as
     above to show how substitution works in the variable case. Try it
@@ -159,7 +286,7 @@ Proof.
     destruct n. auto.
 Qed. (* /ADMITTED *)
 
-(** Exercise [subst_neq_var] *)
+(** *** Exercise [subst_neq_var] *)
 
 Lemma subst_neq_var : forall (x y : var) u,
   y <> x -> [x ~> u](var_f y) = var_f y.
@@ -175,7 +302,7 @@ Proof.
     auto.
 Qed. (* /ADMITTED *)
 
-(** Exercise [subst_same] *)
+(** *** Exercise [subst_same] *)
 
 Lemma subst_same : forall y e, [y ~> var_f y] e = e.
 Proof.
@@ -188,7 +315,7 @@ Qed. (* /ADMITTED *)
 
 
 (*************************************************************************)
-(** * Free variables and variable sets *)
+(** ** Free variables *)
 (*************************************************************************)
 
 (** The function [fv] calculates the set of free variables in an expression.
@@ -209,7 +336,7 @@ Proof.
   fsetdec.
 Qed.
 
-(** Exercise [subst_exp_fresh_eq]
+(** *** Recommended Exercise [subst_exp_fresh_eq]
 
     To show the ease of reasoning with these definitions, we will prove a
     standard result from lambda calculus: if a variable does not appear free
@@ -255,7 +382,7 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (*************************************************************************)
-(** More Exercises                                                        *)
+(** ** Additional Exercises                                              *)
 (*************************************************************************)
 
 (**
@@ -298,7 +425,7 @@ Qed.
 
 (** Now prove the following properties of substitution and fv *)
 
-(** Exercise [subst_exp_fresh_same] *)
+(** *** Exercise [subst_exp_fresh_same] *)
 
 Lemma subst_exp_fresh_same :
 forall u e x,
@@ -313,7 +440,7 @@ Proof.
     ++ simpl. auto.
 Qed. (* /ADMITTED *)
 
-(** Exercise [fv_exp_subst_exp_fresh] *)
+(** *** Exercise [fv_exp_subst_exp_fresh] *)
 
 Lemma fv_exp_subst_exp_fresh :
 forall e u x,
@@ -334,7 +461,7 @@ Proof.
     fsetdec.
 Qed. (* /ADMITTED *)
 
-(** Exercise [fv_exp_subst_exp_upper] *)
+(** *** Exercise [fv_exp_subst_exp_upper] *)
 
 Lemma fv_exp_subst_exp_upper :
 forall e1 e2 x1,
@@ -349,19 +476,20 @@ Proof.
     fsetdec.
 Qed. (* /ADMITTED *)
 
+
 (*************************************************************************)
 (*************************************************************************)
+(** * LN specific operations and relations *)
 (*************************************************************************)
 (*************************************************************************)
 
 
-
 (*************************************************************************)
-(** * Opening *)
+(** ** Opening *)
 (*************************************************************************)
 
 (** Opening replaces an index with a term, and is defined in the Definitions
-    module.  (Also don't miss the notations at the end of the file.)
+    module.
 *)
 
 
@@ -378,34 +506,13 @@ Lemma demo_open :
   (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
   (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
 Proof.
-  unfold open_exp_wrt_exp.
-  unfold open_exp_wrt_exp_rec.
-  simpl.
+  cbn.   (* Like simpl, but unfolds definitions *)
   auto.
 Qed.
 
-(* HINT for demo: To show the equality of the two sides below, use the
-   tactics [unfold], which replaces a definition with its RHS and
-   reduces it to head form, and [simpl], which reduces the term the
-   rest of the way.  Then finish up with [auto].  *)
-
-(* Now use this tactic to simplify the proof above. *)
-Ltac simpl_open :=
-  unfold open_exp_wrt_exp; unfold open_exp_wrt_exp_rec; simpl;
-  fold open_exp_wrt_exp_rec; fold open_exp_wrt_exp.
-
-Lemma demo_open_revised :
-  (app (abs (app (var_b 1) (var_b 0))) (var_b 0)) ^ Y =
-  (app (abs (app (var_f Y) (var_b 0))) (var_f Y)).
-Proof.
-  (* ADMITTED *)
-  simpl_open.
-  reflexivity.
-Qed. (* /ADMITTED *)
-
 
 (*************************************************************************)
-(** * Local closure *)
+(** ** Local closure *)
 (*************************************************************************)
 
 (** The local closure judgement classifies terms that have *no* dangling
@@ -419,24 +526,24 @@ Lemma demo_lc :
 Proof.
   eapply lc_app.
     eapply lc_abs.
-     intro x. simpl_open.
+     intro x. cbn.
      auto.
     auto.
 Qed.
 
 (*************************************************************************)
-(** More Properties about basic operations *)
+(** ** Properties about basic operations *)
 (*************************************************************************)
 
-(** The most important properties about open and lc_exp concern their relationship
-    with the free variable and subst functions.
+(** The most important properties about open and lc_exp concern their
+    relationship with the free variable and subst functions.
 
-    For example, one important property is shown below: that we can
-    commute free and bound variable substitution.
+    For example, one important property is shown below: that we can commute
+    free and bound variable substitution.
 
-    We won't prove this lemma as part of the tutorial (it is proved
-    in Lemmas.v), but it is an important building block for reasoning
-    about LN terms.
+    We won't prove this lemma as part of the tutorial (it is proved in
+    [Lemmas.v]), but it is an important building block for reasoning about
+    LN terms.
 
  *)
 
@@ -469,27 +576,27 @@ Proof.
   rewrite subst_neq_var; auto.
 Qed.   (* /ADMITTED *)
 
-(** *** Take-home Exercise [subst_exp_intro] *)
+(** *** Exercise [subst_exp_intro] *)
 
 (** This next lemma states that opening can be replaced with variable
     opening and substitution.
 
-    HINT: Prove by induction on [e], first generalizing the
-    argument to [open] by using the [generalize] tactic, e.g.,
-    [generalize 0].
-
-*)
+    This lemma, like many about [open_exp_wrt_exp], should be proven
+    via induction on the term [e]. However, during this induction, the
+    binding depth of the term changes, so to make sure that we have
+    a flexible enough induction hypothesis, we must generalize the
+    argument to [open_exp_wrt_exp_rec].  *)
 
 Lemma subst_exp_intro : forall (x : var) u e,
   x `notin` (fv_exp e) ->
   open e u = [x ~> u](e ^ x).
 Proof.
-  (* ADMITTED *)
   intros x u e FV_EXP.
   unfold open.
   unfold open_exp_wrt_exp.
   generalize 0.
   induction e; intro n0; simpl.
+  (* ADMITTED *)
   - Case "var_b".
     destruct (lt_eq_lt_dec n n0).
     destruct s. simpl. auto.
@@ -508,7 +615,7 @@ Qed. (* /ADMITTED *)
 
 
 (*************************************************************************)
-(** Forall quantification in [lc_exp].                                   *)
+(** ** Forall quantification in [lc_exp].                                *)
 (*************************************************************************)
 
 (** Let's look more closely at lc_abs and lc_exp_ind. *)
@@ -561,7 +668,7 @@ Proof.
     intros x0.
     rewrite subst_var.
     apply H0.
-Admitted.
+Abort.
 
 (** Here we are stuck. We don't know that [x0] is not equal to [x],
     which is a preconduction for [subst_var].
@@ -610,3 +717,50 @@ Proof.
   - Case "lc_app".
     simpl. eauto.
 Qed.
+
+(*************************************************************************)
+(** ** Local closure and relations                                       *)
+(*************************************************************************)
+
+(** All of our semantics only hold for locally closed terms, and we can
+    prove that.
+
+    Sometimes, the proofs are straightforward; sometimes a little work is
+    needed.
+*)
+
+Lemma step_lc_exp1 : forall e1 e2, step e1 e2 -> lc_exp e1.
+Proof. intros e1 e2 H. induction H; auto. Qed.
+
+(** *** Exercise [typing_to_lc_exp]
+
+    Use [lc_abs_exists] below to show that well-typed terms
+    are locally closed. *)
+
+Lemma typing_to_lc_exp : forall E e T,
+  typing E e T -> lc_exp e.
+Proof.
+  (* ADMITTED *)
+  intros E e T H. induction H; eauto.
+  pick fresh x1 for L.
+  apply (lc_abs_exists x1).
+  auto.
+Qed.
+(* /ADMITTED *)
+
+(** *** Exercise [step_lc_exp2]
+
+    Use properties such as [subst_exp_intro] and [subst_exp_lc_exp]
+    to show that the result of a step is _also_ locally closed.
+ *)
+
+Lemma step_lc_exp2 : forall e1 e2, step e1 e2 -> lc_exp e2.
+Proof.
+  (* ADMITTED *)
+  induction 1; auto.
+  pick fresh x for (fv_exp e1).
+  inversion H; subst.
+  rewrite (subst_exp_intro x).
+  apply subst_exp_lc_exp; auto.
+  fsetdec.
+Qed. (* /ADMITTED *)

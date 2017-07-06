@@ -41,8 +41,6 @@ Inductive n_exp : Set :=
 Definition swap_var (x:atom) (y:atom) (z:atom) :=
   if (z == x) then y else if (z == y) then x else z.
 
-Hint Unfold swap_var : nominal.
-
 (** The main insight of nominal representations is that we can
     rename variables, without capture, using a simple
     structural induction. Note how in the [n_abs] case we swap
@@ -227,13 +225,13 @@ Qed. (* /ADMITTED *)
 (** * An abstract machine for cbn evaluation                 *)
 (*************************************************************)
 
-
+(*
 Fixpoint get {A :Type} (x:atom) (l : list (atom * A)) : option A :=
   match l with
   | nil => None
   | (y,a)::tl => if (x == y) then Some a else get x tl
   end.
-
+*)
 
 (** The advantage of named terms is an efficient operational
     semantics! Compared to LN or debruijn representation, we
@@ -463,9 +461,9 @@ Fixpoint subst_rec (n:nat) (t:n_exp) (u :n_exp) (x:atom)  : n_exp :=
 Definition subst (u : n_exp) (x:atom) (t:n_exp) :=
   subst_rec (size t) t u x.
 
-(** This lemma uses course of values induction to prove that
-    the size of the term is enough "fuel" to completely calculate
-    the substitution. *)
+(** This lemma uses course of values induction [lt_wf_ind] to prove that the
+    size of the term is enough "fuel" to completely calculate the
+    substitution. Providing larger numbers produces the same result. *)
 Lemma subst_size : forall n (u : n_exp) (x:atom) (t:n_exp),
     size t <= n -> subst_rec n t u x = subst_rec (size t) t u x.
 Proof.

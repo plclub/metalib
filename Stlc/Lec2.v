@@ -1,7 +1,7 @@
 (*************************************************************************)
-(*                                                                       *)
-(* Lecture 2 - Typing: preservation and progress                         *)
-(*                                                                       *)
+(**                                                                      *)
+(** * Typing: preservation and progress                                  *)
+(**                                                                      *)
 (*************************************************************************)
 
 Require Import Metalib.Metatheory.
@@ -11,7 +11,6 @@ Import StlcNotations.
 Require Import Stlc.Lemmas.
 
 Require Import Stlc.Lec1.
-
 
 (*************************************************************************)
 (** * Typing contexts *)
@@ -252,7 +251,7 @@ Proof.
   Case "typing_abs".
     apply (typing_e_abs x).
     (* ... stuck here ... *)
-Admitted.
+Abort.
 
 (** We are stuck in the [typing_abs] case because the induction
     hypothesis [IHtyping_e] applies only when we weaken the context at its
@@ -283,7 +282,7 @@ Proof.
   Focus 2.
   Case "typing_abs".
     (* The [typing_abs] case still does not have a strong enough IH. *)
-Admitted.
+Abort.
 
 (** The hypotheses in the [typing_var] case include an context
     [G0] that that has no relation to what we need to prove.  The
@@ -330,7 +329,7 @@ Proof.
   - Case "typing_abs".
     eapply (typing_e_abs x).
     (* STILL STUCK! *)
-Admitted.
+Abort.
 
 Print typing_abs.
 
@@ -361,7 +360,7 @@ Print typing_abs.
 *)
 
 
-(** *** Exercise
+(** *** Exercise [typing_weakening_strengthened]
 
     Complete the proof below, using the [typing] relation from [Definitions.v].
 
@@ -421,7 +420,7 @@ Proof.
 Qed. (* /ADMITTED *)
 
 
-(** *** Example
+(** *** Demo [typing_weakening]
 
     We can now prove our original statement of weakening.  The only
     interesting step is the use of the rewrite_env tactic.
@@ -466,7 +465,7 @@ Qed.
 *)
 
 
-(** *** Exercise
+(** *** Exercise [typing_subst_var_case]
 
     Below, we state what needs to be proved in the [typing_var] case
     of the substitution lemma.  Fill in the proof.
@@ -510,22 +509,10 @@ Proof.
       eapply binds_remove_mid. apply H. apply n.
 Qed. (* /ADMITTED *)
 
-(** *** Note
-
-    The other two cases of the proof of the substitution lemma are
-    relatively straightforward.  However, the case for [typing_abs]
-    needs the fact that the typing relation holds only for
-    locally-closed expressions.
-*)
-
-Lemma typing_to_lc_exp : forall E e T,
-  typing E e T -> lc_exp e.
-Proof.
-  intros E e T H. induction H; eauto.
-Qed.
 
 
-(** *** Exercise
+
+(** *** Exercise [typing_subst]
 
     Complete the proof of the substitution lemma. The proof proceeds
     by induction on the typing derivation for [e].  The initial steps
@@ -584,7 +571,7 @@ Proof.
       apply IHHe2. reflexivity.
 Qed. (* /ADMITTED *)
 
-(** *** Exercise
+(** *** Exercise [typing_subst_simpl]
 
     Complete the proof of the substitution lemma stated in the form we
     need it.  The proof is similar to that of [typing_weakening].
@@ -606,32 +593,6 @@ Proof.
     apply J.
 Qed. (* /ADMITTED *)
 
-(*************************************************************************)
-(** * Values and Evaluation *)
-(*************************************************************************)
-
-(** In order to state the preservation lemma, we first need to define
-    values and the small-step evaluation relation.  These inductive
-    relations are straightforward to define.
-
-    Note the hypotheses which ensure that the relations hold only for
-    locally closed terms.  Below, we prove that this is actually the
-    case, since it is not completely obvious from the definitions
-    alone.
-*)
-
-Lemma step_lc_exp1 : forall e1 e2, step e1 e2 -> lc_exp e1.
-Proof. induction 1; auto. Qed.
-
-Lemma step_lc_exp2 : forall e1 e2, step e1 e2 -> lc_exp e2.
-Proof. induction 1; auto.
-       - pick fresh x.
-         rewrite (subst_exp_intro x).
-         inversion H.
-         default_simp.
-         apply subst_exp_lc_exp; auto.
-         fsetdec.
-Qed.
 
 (*************************************************************************)
 (** * Preservation *)
@@ -785,7 +746,7 @@ Qed. (* /ADMITTED *)
 (** * Renaming *)
 (*************************************************************************)
 
-(* Substitution and weakening together give us a property we call
+(** Substitution and weakening together give us a property we call
    renaming: (see [typing_rename below] that we can change the name
    of the variable used to open an expression in a typing
    derivation. In practice, this means that if a variable is not
@@ -797,10 +758,9 @@ Qed. (* /ADMITTED *)
    also to show that typechecking is decidable.
 *)
 
-(*
-   However, before we prove renaming, we need an auxiliary lemma about
-   typing judgments which says that terms are well-typed only in
-   unique contexts.
+(** However, before we prove renaming, we need an auxiliary lemma about
+    typing judgments which says that terms are well-typed only in
+    unique contexts.
 *)
 
 Lemma typing_uniq : forall E e T,
@@ -815,8 +775,7 @@ Proof.
 Qed.
 
 
-(*
-   Demo: the proof of renaming.
+(** Demo: the proof of renaming.
 
    Note that this proof does not proceed by induction: even if we add
    new typing rules to the language, as long as the weakening and
@@ -849,13 +808,13 @@ Qed.
 
 
 (*************************************************************************)
-(** * Exists-Fresh Definition *)
+(** ** Demo: Exists-Fresh Definition *)
 (*************************************************************************)
 
-(* The use of cofinite quantification may make some people worry that we
-   are not formalizing the "right" language. Below, we show that
-   the "exists-fresh" version of the rules is the same as the cofinite
-   version. *)
+(** The use of cofinite quantification may make some people worry that we
+    are not formalizing the "right" language. Below, we show that
+    the "exists-fresh" version of the rules is the same as the cofinite
+    version. *)
 
 Lemma typing_abs_exists : forall E e T1 T2 (x : atom),
       x `notin` dom E \u fv_exp e ->
@@ -867,8 +826,6 @@ Proof.
   intros y Fr.
   apply typing_rename with (x:=x); auto.
 Qed.
-
-
 
 
 Lemma exists_cofinite : forall E e T,
@@ -888,7 +845,7 @@ Proof.
 Qed.
 
 (***********************************************************************)
-(** * fv_in_dom *)
+(** ** Additional Exercises                                            *)
 (***********************************************************************)
 
 (** *** Exercise [fv_in_dom]

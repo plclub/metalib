@@ -78,6 +78,23 @@ Qed.
 Hint Rewrite fv_nom_fv_exp_eq : lngen.
 Hint Resolve fv_nom_fv_exp_eq : lngen.
 
+
+
+(** The Metatheory library contains two powerful tactics for simplifying
+    goals:
+
+     - [default_steps]: repeat a bunch of simplifying steps, such as
+       simplifying the goal, inverting simple hypotheses, etc.
+
+     - [default_simp]: above plus case analysis for booleans and other sums
+
+    The behavior of these tactics can be modified by updating the
+    following two definitions.
+*)
+
+Ltac default_auto        ::= auto with lngen.
+Ltac default_autorewrite ::= autorewrite with lngen.
+
 (***********************************************************************)
 
 (** Next, we show that our decoding of nominal terms and
@@ -88,14 +105,14 @@ Hint Resolve fv_nom_fv_exp_eq : lngen.
 
 Lemma nom_to_exp_lc : forall t, lc_exp (nom_to_exp t).
 Proof.
-  induction t; simpl in *; auto with lngen.
+  induction t; default_steps.
 Qed.
 Hint Resolve nom_to_exp_lc : lngen.
 
 Lemma apply_heap_lc : forall h e,
     lc_exp e -> lc_exp (apply_heap h e).
 Proof.
-  alist induction h; simpl in *; auto with lngen.
+  alist induction h; default_simp.
 Qed.
 Hint Resolve apply_heap_lc : lngen.
 
@@ -109,14 +126,14 @@ Hint Resolve apply_heap_lc : lngen.
 Lemma apply_stack_lc : forall s h e,
     lc_exp e -> lc_exp (apply_stack h s e).
 Proof.
-  induction s; try destruct a; simpl in *; auto with lngen.
+  induction s; try destruct a; default_simp.
 Qed.
 Hint Resolve apply_stack_lc : lngen.
 (* /SOLUTION *)
 
 Lemma decode_lc : forall c, lc_exp (decode c).
 Proof.
-  intro c; destruct c as [[h e] s]; simpl in *; auto with lngen.
+  intros [[h e] s]; default_simp.
   (* ADMITTED *)
 Qed. (* /ADMITTED *)
 
@@ -134,7 +151,7 @@ Qed. (* /ADMITTED *)
 Lemma apply_heap_abs : forall h e,
   apply_heap h (abs e) = abs (apply_heap h e).
 Proof.
-  alist induction h; simpl in *; auto with lngen.
+  alist induction h; default_simp.
 Qed.
 
 Hint Rewrite apply_heap_abs : lngen.
@@ -142,7 +159,7 @@ Hint Rewrite apply_heap_abs : lngen.
 Lemma apply_heap_app : forall h e1 e2,
   apply_heap h (app e1 e2) = app (apply_heap h e1) (apply_heap h e2).
 Proof.
-  alist induction h; simpl in *; auto with lngen.
+  alist induction h; default_simp.
 Qed.
 
 Hint Rewrite apply_heap_app : lngen.
@@ -160,9 +177,10 @@ Lemma apply_heap_open : forall h e e0,
     apply_heap h (open e e0)  =
        open (apply_heap h e) (apply_heap h e0).
 Proof.
-  alist induction h; intros; simpl in *;
+  alist induction h; intros;
+    simpl in *;
     try rewrite subst_exp_open_exp_wrt_exp;
-    autorewrite with lngen; auto with lngen.
+    default_simp.
 Qed.
 
 Hint Rewrite apply_heap_open : lngen.
@@ -191,7 +209,7 @@ Lemma apply_stack_cong : forall s h e e',
     step e e' ->
     step (apply_stack h s e) (apply_stack h s e').
 Proof.
-  induction s; intros; try destruct a; simpl in *; auto with lngen.
+  induction s; intros; try destruct a; default_simp.
 Qed.
 
 
@@ -252,7 +270,7 @@ Proof.
   - Case "x is later in the heap".
     rewrite subst_exp_fresh_eq; auto.
     (* ADMITTED *)
-    rewrite scoped_get with (D2:= dom h\u D ); eauto with lngen.
+    rewrite scoped_get with (D2:= dom h\u D ); default_simp; eauto.
 Qed. (* /ADMITTED *)
 
 (***********************************************************************)
@@ -280,8 +298,7 @@ Lemma apply_stack_fresh_eq : forall s x e1 h ,
     x `notin` fv_stack s ->
     apply_stack ((x, e1) :: h) s = apply_stack h s.
 Proof.
-  induction s; intros; try destruct a; simpl in *; auto with lngen.
-  rewrite subst_exp_fresh_eq; auto.
+  induction s; intros; try destruct a; default_simp.
   rewrite IHs; auto.
 Qed.
 
@@ -327,6 +344,9 @@ Proof.
   induction e; default_simp.
 Qed.
 
+Hint Rewrite swap_size_eq : lngen.
+Hint Resolve le_S_n : lngen.
+
 (** One difficulty of [swap_spec] is that we cannot do induction on
     the structure of nominal terms. Instead, we must use a size
     based instead. That way, we will be able to call the IH on subterms
@@ -345,12 +365,9 @@ Proof.
   + unfold swap_var; default_simp.
     { (* w is the binder *)
       autorewrite with lngen in *.
-      rewrite subst_exp_fresh_eq;
-        autorewrite with lngen in *; try fsetdec.
-      rewrite <- IHm; auto; try omega.
-      rewrite subst_exp_spec.
-      rewrite close_exp_wrt_exp_open_exp_wrt_exp. auto.
-      autorewrite with lngen. fsetdec. }
+      rewrite subst_exp_fresh_eq; default_simp.
+      rewrite (close_exp_wrt_exp_freshen w y); try fsetdec.
+      rewrite IHm; default_simp.  }
     { (* y is the binder *)
        autorewrite with lngen in *.
        (* don't know anything about w or y. Either one could
@@ -363,21 +380,20 @@ Proof.
        rewrite (close_exp_wrt_exp_freshen y z); auto.
        rewrite subst_exp_close_exp_wrt_exp; auto.
 
-       rewrite IHm; auto; try omega.
+       rewrite IHm; auto with lngen.
        rewrite (close_exp_wrt_exp_freshen w z); auto.
 
-       rewrite IHm; auto; try rewrite swap_size_eq; try omega.
-       rewrite IHm; auto; try rewrite swap_size_eq; try omega.
-
+       rewrite IHm; default_steps.
+       rewrite IHm; default_steps.
        rewrite shuffle_swap; auto.
+
        rewrite <- fv_nom_fv_exp_eq.
        apply fv_nom_swap.
        rewrite fv_nom_fv_exp_eq.
        fsetdec.
     }
     { (* neither are binders *)
-       rewrite <- IHm; auto; try omega.
-       rewrite subst_exp_close_exp_wrt_exp; auto.
+       rewrite <- IHm; default_steps.
        autorewrite with lngen in *.
        fsetdec.
     }
@@ -554,10 +570,10 @@ Qed. (* /ADMITTED *)
 Lemma apply_heap_get_none : forall x h,
     get x h = None ->
     apply_heap h (var_f x) = var_f x.
-intros.
-alist induction h; simpl in *; auto.
-destruct (x == x0). inversion H.
-eauto.
+Proof.
+  intros.
+  alist induction h; simpl in *; auto.
+  default_simp.
 Qed.
 
 Lemma no_step_stack : forall s h e0,
