@@ -16,7 +16,7 @@
 (** A library for association lists, i.e., lists of pairs *)
 
 
-Require Import Coq.FSets.FSets.
+Require Import Coq.MSets.MSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 
@@ -66,11 +66,11 @@ Require Import Metalib.LibTactics.
 
 Module Make
   (X : UsualDecidableType)
-  (Import KeySet : FSetInterface.WSfun X).
+  (Import KeySet : MSetInterface.WSetsOn X).
 
 Module Import D := CoqFSetDecide.WDecide_fun X KeySet.
-Module KeySetProperties := FSetProperties.WProperties_fun X KeySet.
-Module KeySetFacts := FSetFacts.WFacts_fun X KeySet.
+Module KeySetProperties := MSetProperties.WPropertiesOn X KeySet.
+Module KeySetFacts := MSetFacts.WFactsOn X KeySet.
 
 
 (* *********************************************************************** *)
@@ -513,7 +513,7 @@ Section UniqProperties.
     uniq (x ~ b).
   Proof.
     clear. rewrite_alist ((x ~ b) ++ nil).
-    apply uniq_push. apply uniq_nil. apply empty_1.
+    apply uniq_push. apply uniq_nil. apply F.empty_1.
   Qed.
 
   Lemma uniq_cons_1 :
@@ -1159,8 +1159,8 @@ Section BindsDerived.
   Proof.
     clear. alist induction E as [ | y b F IH ]; intros J.
       simpl_alist in J. fsetdec.
-      simpl_alist in J. apply union_1 in J. destruct J as [J | J].
-        exists b. apply singleton_1 in J. auto.
+      simpl_alist in J. apply F.union_1 in J. destruct J as [J | J].
+        exists b. apply F.singleton_1 in J. auto.
         apply IH in J. destruct J. eauto.
   Qed.
 

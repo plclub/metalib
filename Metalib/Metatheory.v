@@ -17,6 +17,8 @@ Require Export Metalib.LibTactics.
 Require Export Metalib.MetatheoryAtom.
 
 
+
+
 (* ********************************************************************** *)
 (** * Decidable equality *)
 
@@ -90,7 +92,7 @@ Open Scope set_hs_scope.
     parameter inlining, the types in the instantiated functor will all
     use [atom] for the type for keys. *)
 
-Module Export EnvImpl := AssocList.Make AtomDT AtomSetImpl.
+Module Export EnvImpl := AssocList.Make AtomImpl AtomSetImpl.
 
 (** We provide alternative names for the tactics on association lists
     to reflect our use of association lists for environments. *)
@@ -239,9 +241,9 @@ Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin.
     use [auto with set]. *)
 
 Hint Resolve
-  AtomSetImpl.add_1 AtomSetImpl.add_2 AtomSetImpl.remove_1
-  AtomSetImpl.remove_2 AtomSetImpl.singleton_2 AtomSetImpl.union_2
-  AtomSetImpl.union_3 AtomSetImpl.inter_3 AtomSetImpl.diff_3.
+  AtomSetFacts.add_1 AtomSetFacts.add_2 AtomSetFacts.remove_1
+  AtomSetFacts.remove_2 AtomSetFacts.singleton_2 AtomSetFacts.union_2
+  AtomSetFacts.union_3 AtomSetFacts.inter_3 AtomSetFacts.diff_3.
 
 
 (* ********************************************************************** *)

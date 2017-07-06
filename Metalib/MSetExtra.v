@@ -6,9 +6,8 @@
      Brian Aydemir
      Arthur Charg\'eraud *)
 
-Require Import Coq.FSets.FSets.
-
-Require Import Metalib.CoqFSetInterface.
+Require Import Coq.MSets.MSets.
+Require Import Coq.MSets.MSetInterface.
 
 
 (* *********************************************************************** *)
@@ -16,7 +15,7 @@ Require Import Metalib.CoqFSetInterface.
 
 Module Type WSfun (X : DecidableType).
 
-  Include CoqFSetInterface.WSfun X.
+  Include Coq.MSets.MSetInterface.WSetsOn X.
 
   (** Definition of when two sets are disjoint. *)
 
@@ -51,7 +50,7 @@ End WSfun.
 
 Module Make (X : DecidableType) <: WSfun X.
 
-  Include FSetWeakList.Make X.
+  Include Coq.MSets.MSetWeakList.Make X.
 
   Definition disjoint E F := Equal (inter E F) empty.
 
