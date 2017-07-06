@@ -14,7 +14,7 @@ COMPILATION, INSTALLATION, AND DOCUMENTATION:
 
 TUTORIAL:
 
-  The metatheory library comes with a tutorial in directory [Stlc](STLC/).
+  The metatheory library comes with a tutorial in directory [Stlc](Stlc/).
   Make sure that you've compiled the library first. These tutorial files
   contains an introduction to mechanizing programming language definitions
   with binding in Coq and how to reason about them.
