@@ -19,7 +19,7 @@
       - #<a href="##auto">Automation</a>#
       - #<a href="##body">Properties of body_e</a># *)
 
-Require Export Metalib.Fsub_LetSum_Definitions.
+Require Export Fsub.Fsub_LetSum_Definitions.
 
 
 (* ********************************************************************** *)

@@ -331,7 +331,7 @@ Proof.
   Case "bvar".
     assumption.
   Case "fvar".
-    destruct (a == y).
+  destruct (a == y).
       assumption.
       simpl. assumption.
   Case "abs".
@@ -1901,4 +1901,3 @@ Proof.
   Case "typing_abs".
         apply typing_abs with (x:=x). auto.
 Admitted.
-

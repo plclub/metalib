@@ -2151,4 +2151,3 @@ Proof.
   Case "typing_abs".
         apply typing_abs with (x:=x). auto.
 Admitted.
-
