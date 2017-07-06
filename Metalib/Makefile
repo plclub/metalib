@@ -54,7 +54,7 @@ coq: $(COQMKFILENAME)
 doc:
 	@$(MAKE) -f $(COQMKFILENAME) html
 
-install:
+install: all
 	@$(MAKE) -f $(COQMKFILENAME) install
 
 clean:
