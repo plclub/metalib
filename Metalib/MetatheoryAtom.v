@@ -37,6 +37,10 @@ Module Type ATOM.
   Parameter atom_fresh_for_list :
     forall (xs : list atom), {x : atom | ~ List.In x xs}.
 
+  Parameter fresh : list atom -> atom.
+
+  Parameter fresh_not_in : forall l, ~ In (fresh l) l.
+
   Hint Resolve eq_atom_dec.
 
 End ATOM.
@@ -79,6 +83,16 @@ Module AtomImpl : ATOM.
     exists (S x). intros J. lapply (H (S x)). omega. trivial.
   Qed.
 
+  Definition fresh (l : list atom) :=
+    match atom_fresh_for_list l with
+      (exist _ x _) => x
+    end.
+
+  Lemma fresh_not_in : forall l, ~ In (fresh l) l.
+  Proof.
+    intro l. unfold fresh.
+    destruct atom_fresh_for_list. auto.
+  Qed.
   (* end hide *)
 
 End AtomImpl.

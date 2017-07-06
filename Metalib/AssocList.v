@@ -64,9 +64,24 @@ Require Import Metalib.LibTactics.
      - No real support for [maps].
      - No support for permutations. *)
 
+
+Require Import Coq.Classes.Equivalence.
+Require Import Coq.Classes.EquivDec.
+Require Import Metalib.CoqEqDec.
+
+
 Module Make
   (X : UsualDecidableType)
-  (Import KeySet : FSetInterface.WSfun X).
+  (KeySet : FSetInterface.WSfun X).
+
+Instance EqDec_of_X : @EqDec X.t eq eq_equivalence.
+Proof. exact X.eq_dec. Qed.
+Instance EqDec_eq_of_X: @EqDec_eq X.t.
+Proof. exact (EqDec_eq_of_EqDec X.t EqDec_of_X). Qed.
+
+Open Scope coqeqdec_scope.
+
+Import KeySet.
 
 Module Import D := CoqFSetDecide.WDecide_fun X KeySet.
 Module KeySetProperties := FSetProperties.WProperties_fun X KeySet.
@@ -116,7 +131,7 @@ Fixpoint get
   : option C :=
   match E with
     | nil => None
-    | (y, c) :: F => if X.eq_dec x y then Some c else get x F
+    | (y, c) :: F => if (x == y) then Some c else get x F
   end.
 
 (** [binds] is a ternary predicate that holds when a key-value pair
@@ -209,7 +224,7 @@ Section ListProperties.
     List.In x (one y) <-> x = y.
   Proof.
     clear. split.
-      inversion 1 as [ | HIn]; intuition. inversion HIn.
+      inversion 1 as [ | HIn]; intuition.
       constructor; intuition.
   Qed.
 

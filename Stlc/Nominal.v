@@ -68,7 +68,7 @@ Fixpoint swap (x:atom) (y:atom) (t:n_exp) : n_exp :=
 Fixpoint fv_nom (n : n_exp) : atoms :=
   match n with
   | n_var x => {{x}}
-  | n_abs x n => AtomSetImpl.remove x (fv_nom n)
+  | n_abs x n => remove x (fv_nom n)
   | n_app n1 n2 => fv_nom n1 `union` fv_nom n2
   end.
 
@@ -169,7 +169,8 @@ Qed.   (* /ADMITTED *)
 (** Challenge exercises: equivariance
 
     Equivariance is the property that all functions and relations
-    are preserved under swapping.
+    are preserved under swapping. (Hint: default_simp won't be
+    able to do all of these automatically.)
 
 *)
 Lemma swap_var_equivariance : forall n x y z w,
@@ -224,14 +225,6 @@ Qed. (* /ADMITTED *)
 (*************************************************************)
 (** * An abstract machine for cbn evaluation                 *)
 (*************************************************************)
-
-(*
-Fixpoint get {A :Type} (x:atom) (l : list (atom * A)) : option A :=
-  match l with
-  | nil => None
-  | (y,a)::tl => if (x == y) then Some a else get x tl
-  end.
-*)
 
 (** The advantage of named terms is an efficient operational
     semantics! Compared to LN or debruijn representation, we
@@ -288,8 +281,8 @@ Definition machine_step (avoid : atoms) (c : conf) : Step conf :=
         match e with
         | n_abs x e =>
           (* if the bound name [x] is not fresh, we need to rename it *)
-          if AtomSetProperties.In_dec x avoid  then
-            let (y,_) := atom_fresh avoid in
+          if AtomSetProperties.In_dec x (dom h `union` avoid)  then
+            let (y,_) := atom_fresh (dom h `union` avoid) in
              TakeStep _ ((y,a)::h, swap x y e, s')
           else
             TakeStep _ ((x,a)::h, e, s')
@@ -327,6 +320,7 @@ Definition initconf (e : n_exp) : conf := (nil,e,nil).
 substitution semantics.)
 
 *)
+
 
 
 (*************************************************************)
@@ -462,7 +456,7 @@ Definition subst (u : n_exp) (x:atom) (t:n_exp) :=
   subst_rec (size t) t u x.
 
 (** This lemma uses course of values induction [lt_wf_ind] to prove that the
-    size of the term is enough "fuel" to completely calculate the
+    size of the term [t] is enough "fuel" to completely calculate a
     substitution. Providing larger numbers produces the same result. *)
 Lemma subst_size : forall n (u : n_exp) (x:atom) (t:n_exp),
     size t <= n -> subst_rec n t u x = subst_rec (size t) t u x.

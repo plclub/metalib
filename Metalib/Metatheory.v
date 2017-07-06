@@ -18,16 +18,6 @@ Require Export Metalib.MetatheoryAtom.
 
 
 (* ********************************************************************** *)
-(** * Decidable equality *)
-
-(** We prefer that "==" refer to decidable equality at [eq], as
-    defined by the [EqDec_eq] class from the CoqEqDec library. *)
-
-Notation " x  == y " := (eq_dec x y) (at level 70) : coqeqdec_scope.
-
-Open Scope coqeqdec_scope.
-
-(* ********************************************************************** *)
 (** * Notations for finite sets of atoms *)
 
 (** Common set operations and constants may be written using more
