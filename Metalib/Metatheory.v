@@ -11,7 +11,7 @@ Require Export Coq.FSets.FSets.
 Require Export Coq.Lists.List.
 
 Require Export Metalib.AssocList.
-Require Export Metalib.CoqEqDec.
+(* Require Export Metalib.CoqEqDec. *)
 Require Export Metalib.CoqListFacts.
 Require Export Metalib.LibTactics.
 Require Export Metalib.MetatheoryAtom.
@@ -25,7 +25,7 @@ Require Export Metalib.MetatheoryAtom.
 (** We prefer that "==" refer to decidable equality at [eq], as
     defined by the [EqDec_eq] class from the CoqEqDec library. *)
 
-Notation " x  == y " := (eq_dec x y) (at level 70) : coqeqdec_scope.
+Notation " x  == y " := (AtomImpl.eq_dec x y) (at level 70) : coqeqdec_scope.
 
 Open Scope coqeqdec_scope.
 
@@ -257,7 +257,7 @@ Notation var := atom (only parsing).
 
 Notation vars := atoms (only parsing).
 
-Notation eq_var := eq_dec (only parsing).
+Notation eq_var := AtomImpl.eq_dec (only parsing).
 
 Notation "x  ===  y" :=
   (x == y)

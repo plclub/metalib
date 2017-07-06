@@ -54,7 +54,7 @@ Module AtomImpl : ATOM.
 
   (* begin hide *)
   Definition atom := nat.
-  Definition t := nat.
+  Definition t := atom.
 
   Definition eq_dec := eq_nat_dec.
 
@@ -156,6 +156,15 @@ Module Export AtomSetNotin := MSetWeakNotin.Notin_fun AtomImpl AtomSetImpl.
 Module AtomSetFacts := MSetFacts.WFactsOn AtomImpl AtomSetImpl.
 Module AtomSetProperties := MSetProperties.WPropertiesOn AtomImpl AtomSetImpl.
 
+(** SCW: Switching from FSets to MSets lost the following setiod relation. *)
+
+Add Relation atoms AtomSetImpl.Subset
+ reflexivity proved by AtomSetFacts.Subset_refl
+ transitivity proved by AtomSetFacts.Subset_trans
+ as SubsetSetoid.
+
+(** SCW: Should we do this? The FSets based version did by default. *)
+(* Export AtomSetFacts. *)
 
 (* ********************************************************************** *)
 (** * Properties *)

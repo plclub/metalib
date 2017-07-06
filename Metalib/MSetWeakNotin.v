@@ -21,7 +21,7 @@ Require Import Metalib.CoqFSetDecide.
 (** * Implementation *)
 
 Module Notin_fun
-  (E : DecidableType) (Import X : MSetInterface.WSetsOn E).
+  (E : DecidableType) (Import X : CoqMSetInterface.WSetsOn E).
 
 Module Import D := CoqFSetDecide.WDecide_fun E X.
 

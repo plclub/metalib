@@ -2,16 +2,17 @@ DONE
 * add more explanation to beginning of tutorial, especially about the role of
   Ott and LNgen. Lose talk.mng.
 
+* merge metalib 8.6 into master
+
+DONT DO
+* Universe polymorphism in metalib [no! nat is a Set]
+
 SOONER
 * make coqdoc output readable (sf-like)
 
-* merge metalib 8.6 into master
 * merge metalib dsss into master
 
 
-* Break out notations in metalib
-   add notation scopes
-* Universe polymorphism in metalib
 
 
 LATER

@@ -23,6 +23,7 @@ Require Import Coq.Logic.Decidable.
 Require Import Metalib.CoqFSetDecide.
 Require Import Metalib.CoqListFacts.
 Require Import Metalib.LibTactics.
+Require Import Metalib.CoqMSetInterface.
 
 
 (* *********************************************************************** *)
@@ -66,7 +67,7 @@ Require Import Metalib.LibTactics.
 
 Module Make
   (X : UsualDecidableType)
-  (Import KeySet : MSetInterface.WSetsOn X).
+  (Import KeySet : CoqMSetInterface.WSetsOn X).
 
 Module Import D := CoqFSetDecide.WDecide_fun X KeySet.
 Module KeySetProperties := MSetProperties.WPropertiesOn X KeySet.

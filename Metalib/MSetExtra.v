@@ -7,7 +7,7 @@
      Arthur Charg\'eraud *)
 
 Require Import Coq.MSets.MSets.
-Require Import Coq.MSets.MSetInterface.
+Require Import CoqMSetInterface.
 
 
 (* *********************************************************************** *)
@@ -15,7 +15,7 @@ Require Import Coq.MSets.MSetInterface.
 
 Module Type WSfun (X : DecidableType).
 
-  Include Coq.MSets.MSetInterface.WSetsOn X.
+  Include CoqMSetInterface.WSetsOn X.
 
   (** Definition of when two sets are disjoint. *)
 

@@ -881,7 +881,7 @@ the above form:
 
 End WDecide_fun.
 
-Require Import Coq.MSets.MSetInterface.
+Require Import CoqMSetInterface.
 
 (** Now comes variants for self-contained weak sets and for full sets.
     For these variants, only one argument is necessary. Thanks to
