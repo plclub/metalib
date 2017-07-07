@@ -7,6 +7,8 @@ DONE
 * Better definition of get in metalib
 * add lngen autorewrites to default_simp
 
+* improve  behavior of fsetdec
+
 SOONER
 * make coqdoc output readable (sf-like)
 
@@ -40,4 +42,5 @@ LATER
 * patch Ott for fset based fv function
 
 * Type classes ??? for LNgen
+
 * produce nominal lngen -- i.e. autogenerate swap & auto prove equivariance

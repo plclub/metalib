@@ -228,15 +228,29 @@ Lemma nom_envsubst_open : forall rho e e',
  (forall v, lc_exp (nom_val_to_exp v)) ->
  (nom_envsubst rho (open e e')) = (open (nom_envsubst rho e) (nom_envsubst rho e')).
 Proof.
-  induction rho; intros; simpl. auto.
+  induction rho; intros; default_simp.
   rewrite subst_exp_open_exp_wrt_exp; eauto.
+  admit. (* lc *)
+Admitted.
+
+
+Lemma nom_envsubst_fresh_eq : forall rho e,
+    closed_env rho ->
+    fv_exp e [=] {} ->
+    nom_envsubst rho e = e.
+Proof.
+  induction rho. simpl. auto.
+  intros. simpl.
+  inversion H.
+  rewrite subst_exp_fresh_eq; auto.
+  rewrite H0. auto.
 Qed.
 
 
-Lemma nom_envsubst_var : forall x rho v,
+Lemma nom_envsubst_var : forall x rho e rho',
     closed_env rho ->
-    Some v = rho_lookup x rho ->
-    nom_envsubst rho (var_f x) = nom_val_to_exp v.
+    Some (e,rho') = rho_lookup x rho ->
+    nom_envsubst rho (var_f x) = nom_envsubst rho' (nom_to_exp e).
 Proof.
   induction rho.
   - intros. simpl in *. inversion H0.
@@ -245,11 +259,12 @@ Proof.
      destruct (x == a).
      + inversion H0. subst. clear H0.
     simpl.
-    rewrite nom_envsubst_fresh_eq; auto.
-  + eapply IHrho; auto.
+    rewrite (nom_envsubst_fresh_eq rho2); auto.
+    apply fv_closed_env; auto.
+  + eapply IHrho2; auto.
 Qed.
 
-Lemma nom_envsubst_abs : forall rho T e,
+Lemma nom_envsubst_abs : forall rho e,
  nom_envsubst rho (abs e) = abs (nom_envsubst rho e).
 Proof.
   induction rho; simpl; eauto.
@@ -263,6 +278,7 @@ Qed.
 
 (* ----------------------------------------- *)
 
+(*
 Lemma fv_closed :
   (forall v, closed_val v -> fv_exp (nom_val_to_exp v) [=] {}).
 Proof.
@@ -271,15 +287,6 @@ Proof.
   rewrite envsubst_abs.
   rewrite H0.
 
-Lemma nom_envsubst_fresh_eq : forall rho v,
-    closed_val v ->
-    nom_envsubst rho (nom_val_to_exp v) = nom_val_to_exp v.
-Proof.
-  induction rho. simpl. auto.
-  intros. simpl.
-  rewrite subst_exp_fresh_eq; auto.
-  rewrite fv_closed; auto.
-Qed.
 
 
 Scheme closed_val_ind' := Induction for closed_val Sort Prop
@@ -317,6 +324,7 @@ Lemma fv_closed_env :
 Proof.
   eapply fv_closed_mutual.
 Qed.
+*)
 
 (* Now we can use these results to show that the interpreter
    produces closed values from appropriate environments and terms. *)
@@ -331,33 +339,27 @@ Proof.
   intros; simpl in *. inversion H.
   intros.  destruct e; simpl in *.
   - Case "var".
-    eapply rho_lookup_closed_val with (x:=x); eauto.
-    destruct (rho_lookup x rho);
+    destruct (rho_lookup x rho) eqn:?;
     inversion H;  auto.
+    destruct p.
+    admit. (* eapply rho_lookup_closed_val with (x:=x); eauto. *)
   - Case "abs".
     inversion H.  subst.
     econstructor; eauto.
     rewrite fv_exp_close_exp_wrt_exp in H1.
     rewrite <- H1.
-    (* TODO: see why fsetdec cannot do this. *)
-    eapply FSetDecideTestCases.test_Subset_add_remove.
+    fsetdec.
 
   - Case "app".
-    remember (nom_interp n e1 rho) as r1.
-    remember (nom_interp n e2 rho) as r2.
-    destruct r1; try solve [inversion H].
+    destruct (nom_interp n e1 rho) eqn:?; try solve [inversion H].
     assert (C1: closed_val n0). eapply IHn; eauto. fsetdec.
-    destruct n0 as [x T rho' e1'].
-    inversion C1. simpl in H7.
-
-    destruct r2; try solve [inversion H].
+    destruct n0 as [x rho' e1'].
+    inversion C1.
+    destruct  (nom_interp n e2 rho) eqn:?; try solve [inversion H].
     assert (C2: closed_val n0). eapply IHn; eauto. fsetdec.
-
-    subst.
     eapply IHn; eauto.
-    simpl.
-    fsetdec.
-Qed.
+    admit.
+Admitted.
 
 
 

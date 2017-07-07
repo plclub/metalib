@@ -8,7 +8,7 @@ paperclean:
 	rm -if *-rules.tex $(TOP).tex *.log ./*~ *.aux $(PDFS) *.bbl *.blg *.fdb_latexmk *.fls *.out *.nav
 
 
-%.pdf : %.tex Makefile
+%.pdf : %.tex gen.mk
 	latexmk -bibtex -pdf $*.tex
 
 $(RULESFILE): stlc.ott
@@ -17,17 +17,17 @@ $(RULESFILE): stlc.ott
           -tex_show_meta false
 
 
-%.tex: $(RULESFILE) %.mng Makefile
+%.tex: $(RULESFILE) %.mng gen.mk
 	ott -i stlc.ott \
                     -tex_wrap false \
                     -tex_show_meta false \
                     -tex_filter $*.mng $*.tex
 
-Stlc.v: stlc.ott Makefile
+Stlc.v: stlc.ott gen.mk
 	ott -i stlc.ott -o Stlc.v -coq_lngen true -coq_expand_list_types true
 	make -f gen.mk METALIB.FIX_Stlc
 
-Stlc_inf.v: stlc.ott Makefile
+Stlc_inf.v: stlc.ott gen.mk
 	lngen --coq-no-proofs --coq Stlc_inf.v --coq-ott Stlc stlc.ott
 	make -f gen.mk METALIB.FIX_Stlc_inf
 
