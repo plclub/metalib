@@ -1,6 +1,19 @@
 An interactive tutorial on specifying and implementing the simply-typed
 lambda calculus in Coq.
 
+
+INSTALLATION
+
+  This tutorial depends on the `Metalib.Metatheory` library, available from
+  [https://github.com/plclub/metalib](https://github.com/plclub/metalib).
+  Make sure that you compile and install this library _first_.
+
+  After you have done that, you can use make to compile the tutorial material
+  and generate the documentation.
+
+    `make`                  - Compile all Coq files
+    `make html`             - Make documentation
+
 CONTENTS
 
 Read through the tutorial files in this order. Some files have embedded
@@ -20,6 +33,8 @@ exercises; their solutions are in the associated `sol` directory.
 Warning: the exercises start simple, but ramp up. The first two exercise files
 have significantly simpler exercises than the second two files.
 
+EXTRA
+
 The `extra` directory includes files and recipes that were used to generate
 the some of the above definitions and lemmas, using
 the [Ott](http://www.cl.cam.ac.uk/~pes20/ott/)
@@ -32,17 +47,6 @@ and [LNgen](https://github.com/plclub/lngen) tools.
      stlc.pdf          - PDF version of rules
      Stlc.v            - Ott-generated version of `Definitions.v`
      Stlc_inf.v        - LNgen generated version of `Lemmas.v`
-
-
-INSTALLATION
-
-  This tutorial depends on the `Metalib.Metatheory` library, available from
-  [https://github.com/plclub/metalib](https://github.com/plclub/metalib).
-  Make sure that you compile and install this library _first_. Then you can
-  use make to compile the tutorial material and generate the documentation.
-
-    `make`                  - Compile all Coq files
-    `make html`             - Make documentation
 
   If you have Ott and LNgen installed, you may also generate the files above.
 
