@@ -19,6 +19,9 @@ TUTORIAL:
   contains an introduction to mechanizing programming language definitions
   with binding in Coq and how to reason about them.
 
+  An additional example of the library is available in the
+  [Fsub](Fsub/) directory.
+
   Those new to Coq should start with Software Foundations, which is an
   introduction to using Coq. The tutorial assumes some familarity with
   this resource.

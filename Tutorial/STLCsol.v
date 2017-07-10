@@ -120,18 +120,24 @@ Definition demo_rep2 := abs typ_base (abs typ_base (app 0 1)).
 
 *)
 
-(** <<
 
 Definition two :=
-  (* FILL IN HERE *)
+  (* SOLUTION *)
+  abs (typ_arrow typ_base typ_base)
+                      (abs typ_base (app 1 (app 1 0))).
 
 Definition COMB_K :=
-  (* FILL IN HERE *)
+  (* SOLUTION *)
+	abs typ_base
+    (abs typ_base 1).
 
 Definition COMB_S :=
-   (* FILL IN HERE *)
+   (* SOLUTION *)
+   abs (typ_arrow typ_base (typ_arrow typ_base typ_base))
+    (abs (typ_arrow typ_base typ_base)
+      (abs (typ_base)
+        (app (app 2 0) (app 1 0)))).
 
->> *)
 
 (** There are two important advantages of the locally nameless
     representation:
@@ -229,12 +235,29 @@ Qed.
 Lemma subst_eq_var: forall (x : atom) u,
   [x ~> u]x = u.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros x u.
+  simpl.
+  destruct (x == x).
+  Case "left".
+    auto.
+  Case "right".
+    destruct n. auto.
+Qed.
 
 Lemma subst_neq_var : forall (x y : atom) u,
   y <> x -> [x ~> u]y = y.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros x y u.
+  simpl.
+  intro Neq.
+  destruct (y == x).
+  Case "left".
+    destruct Neq. auto.
+  Case "right".
+    auto.
+Qed.
 
 
 (*************************************************************************)
@@ -306,7 +329,28 @@ Qed.
 Lemma subst_fresh : forall (x : atom) e u,
   x `notin` fv e -> [x ~> u] e = e.
 Proof.
-  (* FILL IN HERE (and delete "Admitted") *) Admitted.
+  (* SOLUTION *)
+  intros x e u H.
+  induction e.
+  Case "bvar".
+    auto.
+  Case "fvar".
+    simpl.
+    destruct (a == x).
+    SCase "a=x".
+      subst. simpl fv in H. fsetdec.
+    SCase "a<>x".
+      auto.
+  Case "abs".
+    simpl.
+    f_equal.
+    auto.
+  Case "app".
+    simpl in *.
+    f_equal.
+    auto.
+    auto.
+Qed.
 
 (* Take-home Demo: Prove that free variables are not introduced by
    substitution.
@@ -331,7 +375,7 @@ Proof.
   Case "bvar".
     assumption.
   Case "fvar".
-  destruct (a == y).
+    destruct (a == y).
       assumption.
       simpl. assumption.
   Case "abs".
@@ -412,7 +456,12 @@ Lemma demo_open :
   open (app (abs typ_base (app 1 0)) 0) Y =
        (app (abs typ_base (app Y 0)) Y).
 Proof.
-Admitted.
+  unfold open.
+  unfold open_rec.
+  simpl.
+  auto.
+Qed.
+
 (* HINT for demo: To show the equality of the two sides below, use the
    tactics [unfold], which replaces a definition with its RHS and
    reduces it to head form, and [simpl], which reduces the term the
@@ -573,6 +622,19 @@ Qed.
    shorter proof. Reprove this lemma on your own to see how compact
    you can make it. *)
 
+(* SOLUTION *)
+Lemma open_rec_lc_core_automated : forall e j v i u,
+  i <> j ->
+  {j ~> v} e = {i ~> u} ({j ~> v} e) ->
+  e = {i ~> u} e.
+Proof with try solve [eauto | congruence].
+  induction e; intros j v i u Neq H; simpl in *;
+      try solve [inversion H; f_equal; eauto].
+  Case "bvar".
+    destruct (j == n)...
+    destruct (i == n)...
+Qed.
+
 
 (** With the help of this lemma, we can complete the proof. *)
 
@@ -617,7 +679,14 @@ Lemma subst_open_rec : forall e1 e2 u (x : atom) k,
   lc u ->
   [x ~> u] ({k ~> e2} e1) = {k ~> [x ~> u] e2} ([x ~> u] e1).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  induction e1; intros e2 u x k H; simpl in *; f_equal; auto.
+  Case "bvar".
+    destruct (k == n); auto.
+  Case "fvar".
+    destruct (a == x); subst; auto.
+    apply open_rec_lc; auto.
+Qed.
 
 
 (** *** Exercise [subst_open_var] *)
@@ -636,7 +705,12 @@ Lemma subst_open_var : forall (x y : atom) u e,
   lc u ->
   open ([x ~> u] e) y = [x ~> u] (open e y).
 Proof.
-  (* FILL IN HERE (and delete "Admitted") *) Admitted.
+  (* SOLUTION *)
+  intros x y u e Neq H.
+  unfold open.
+  rewrite subst_open_rec with (e2 := fvar y); auto.
+  rewrite subst_neq_var; auto.
+Qed.
 
 (** *** Take-home Exercise [subst_intro] *)
 
@@ -653,7 +727,25 @@ Lemma subst_intro : forall (x : atom) u e,
   x `notin` (fv e) ->
   open e u = [x ~> u](open e x).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros x u e FV.
+  unfold open.
+  generalize 0.
+  induction e; intro n0; simpl.
+  Case "bvar".
+    destruct (n0 == n).
+    rewrite subst_eq_var. auto.
+    simpl. auto.
+  Case "fvar".
+    destruct (a == x). subst. simpl in FV. fsetdec. auto.
+  Case "abs".
+    f_equal. simpl in FV. apply IHe. auto.
+  Case "app".
+    simpl in FV.
+    f_equal.
+    apply IHe1. auto.
+    apply IHe2. auto.
+Qed.
 
 End BasicOperations.
 
@@ -805,14 +897,26 @@ Lemma subst_open_rec_c : forall e1 e2 u (x : atom) k,
   lc_c u ->
   [x ~> u] ({k ~> e2} e1) = {k ~> [x ~> u] e2} ([x ~> u] e1).
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+(* SOLUTION *)
+  induction e1; intros e2 u x k H; simpl in *; f_equal; auto.
+  Case "bvar".
+    destruct (k == n); auto.
+  Case "fvar".
+    destruct (a == x); subst; auto.
+    apply open_rec_lc_c; auto.
+Qed.
 
 Lemma subst_open_var_c : forall (x y : atom) u e,
   y <> x ->
   lc_c u ->
   open ([x ~> u] e) y = [x ~> u] (open e y).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros x y u e Neq H.
+  unfold open.
+  rewrite subst_open_rec_c with (e2 := fvar y); auto.
+  rewrite subst_neq_var; auto.
+Qed.
 
 (* Exercise [subst_lc_c]:
 
@@ -838,7 +942,13 @@ Proof.
      auto.
   Case "lc_abs_c".
     simpl.
-    (* FILL IN HERE (and delete "Admitted") *) Admitted.
+    (* SOLUTION *)
+    apply lc_abs_c with (L := L `union` singleton x).
+    intros x0 Fr.
+    rewrite subst_open_var_c. auto. auto. auto.
+  Case "lc_app_c".
+     simpl. auto.
+Qed.
 
 End CofiniteQuantification.
 
@@ -1213,8 +1323,27 @@ Proof.
   remember (G ++ E) as E'.
   generalize dependent G.
   induction H; intros G Eq Uniq; subst.
- (* FILL IN HERE (and delete "Admitted") *) Admitted.
+ (* SOLUTION *)
+  Case "typing_var_c".
+    apply typing_var_c.
+      apply Uniq.
+      apply binds_weaken. apply H0.
+  Case "typing_abs_c".
 
+
+    pick fresh x and apply typing_abs_c.
+    rewrite_env (((x ~ T1) ++ G) ++ F ++ E).
+    apply H0.
+      auto.
+      simpl_env. reflexivity.
+      simpl_env. apply uniq_push.
+        apply Uniq.
+        auto.
+  Case "typing_app_c".
+    eapply typing_app_c.
+      eapply IHtyping_c1. reflexivity. apply Uniq.
+      eapply IHtyping_c2. reflexivity. apply Uniq.
+Qed.
 
 
 (** *** Example
@@ -1289,7 +1418,21 @@ Lemma typing_subst_var_case : forall (E F : env) u S T (z x : atom),
 Proof.
   intros E F u S T z x H J K.
   simpl.
- (* FILL IN HERE (and delete "Admitted") *) Admitted.
+ (* SOLUTION *)
+  destruct (x == z).
+  Case "x = z".
+    subst.
+    assert (T = S).
+      eapply binds_mid_eq. apply H. apply J.
+    subst.
+    apply typing_c_weakening.
+      apply K.
+      eapply uniq_remove_mid. apply J.
+  Case "x <> z".
+    apply typing_var_c.
+      eapply uniq_remove_mid. apply J.
+      eapply binds_remove_mid. apply H. apply n.
+Qed.
 
 (** *** Note
 
@@ -1337,8 +1480,35 @@ Lemma typing_c_subst : forall (E F : env) e u S T (z : atom),
   typing_c E u S ->
   typing_c (F ++ E) ([z ~> u] e) T.
 Proof.
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
+(* SOLUTION *)
+  intros E F e u S T z He Hu.
+  remember (F ++ (z ~ S) ++ E) as E'.
+  generalize dependent F.
+  induction He.
+  Case "typing_var_c".
+    intros F Eq.
+    subst.
+    eapply typing_subst_var_case. apply H0. apply H. apply Hu.
+  Case "typing_abs_c".
+    intros F Eq.
+    subst.
+    simpl.
 
+
+    pick fresh y and apply typing_abs_c.
+    rewrite subst_open_var_c.
+    rewrite_env (((y ~ T1) ++ F) ++ E).
+    apply H0.
+      auto.
+      simpl_env. reflexivity.
+    (* The following subgoals are from [rewrite subst_open_var]. *)
+    auto.
+    eapply typing_c_to_lc_c. apply Hu.
+  Case "typing_app_c".
+    intros F Eq. subst. simpl. eapply typing_app_c.
+      apply IHHe1. reflexivity.
+      apply IHHe2. reflexivity.
+Qed.
 
 (** *** Exercise
 
@@ -1354,7 +1524,13 @@ Lemma typing_c_subst_simple : forall (E : env) e u S T (z : atom),
   typing_c E u S ->
   typing_c E ([z ~> u] e) T.
 Proof.
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
+(* SOLUTION *)
+  intros E e u S T z H J.
+  rewrite_env (nil ++ E).
+  eapply typing_c_subst.
+    simpl_env. apply H.
+    apply J.
+Qed.
 
 (*************************************************************************)
 (** * Values and Evaluation *)
@@ -1447,7 +1623,19 @@ Proof.
   intros E e e' T H.
   generalize dependent e'.
   induction H; intros e' J.
-(* OPTIONAL EXERCISE *) Admitted.
+(* SOLUTION *)
+  Case "typing_var_c".
+    inversion J.
+  Case "typing_abs_c".
+    inversion J.
+  Case "typing_app_c".
+    inversion J; subst; eauto.
+    SCase "eval_beta".
+      inversion H; subst.
+      pick fresh y.
+      rewrite (subst_intro y); auto.
+      eapply typing_c_subst_simple; auto.
+Qed.
 
 (*************************************************************************)
 (** * Progress *)
@@ -1509,7 +1697,28 @@ Proof.
 
   induction H; subst.
 
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
+(* SOLUTION *)
+  Case "typing_var_c".
+    inversion H1.
+  Case "typing_abs_c".
+    left.
+    apply value_abs_c.
+    eapply typing_c_to_lc_c; eauto.
+  Case "typing_app_c".
+    right.
+    destruct IHtyping_c1 as [V1 | [e1' Eval1]]; auto.
+      SCase "e1 is a value".
+      destruct IHtyping_c2 as [V2 | [e2' Eval2]]; auto.
+        SSCase "e2 is a value".
+          inversion V1; subst. exists (open e e2); auto.
+        SSCase "e2 is not a value".
+          exists (app e1 e2'); auto.
+      SCase "e1 is not a value".
+        exists (app e1' e2).
+        apply eval_app_1_c.
+          eapply typing_c_to_lc_c; eauto.
+          assumption.
+Qed.
 
 
 (*************************************************************************)
@@ -1659,7 +1868,12 @@ Qed.
 (* Take-home exercise. *)
 Lemma lc_c_to_lc : forall e, lc_c e -> lc e.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+(* SOLUTION *)
+  intros e LCC. induction LCC; auto.
+  Case "lc_abs_c".
+     pick fresh x.
+     apply lc_abs with (x:=x); auto.
+Qed.
 
 (** Correspondence of typing and typing_c *)
 
@@ -1678,7 +1892,13 @@ Qed.
 Lemma typing_c_to_typing : forall E e T,
   typing_c E e T -> typing E e T.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+(* SOLUTION *)
+  intros E e T H.
+  induction H; eauto.
+  Case "typing_abs_c".
+    pick fresh x.
+    apply typing_abs with (x:=x); auto.
+Qed.
 
 (* Demo. The pattern [eauto using lemma] is a powerful way to completely
    automate all of the cases of a simple proof. *)
@@ -1693,7 +1913,10 @@ Qed.
 Lemma value_c_to_value : forall e,
   value_c e -> value e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros e H.
+  induction H; eauto using lc_c_to_lc.
+Qed.
 
 (* Demo: We can do the same trick with several lemmas. *)
 Lemma eval_to_eval_c : forall e e',
@@ -1707,7 +1930,10 @@ Qed.
 Lemma eval_c_to_eval : forall e e',
   eval_c e e' -> eval e e'.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros e e' H.
+  induction H; eauto using lc_c_to_lc, value_c_to_value.
+Qed.
 
 Lemma preservation : forall E e e' T,
   typing E e T ->
@@ -1762,7 +1988,12 @@ Lemma open_abs : forall e u T1,
   lc u ->
   lc (open e u).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros e u T1 H J.
+  inversion H; subst; auto.
+  rewrite (subst_intro x); auto.
+  apply subst_lc; auto.
+Qed.
 
 
 (* Take-home exercise:
@@ -1773,17 +2004,23 @@ Proof.
 Lemma value_to_lc : forall e,
   value e -> lc e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros e H. induction H; auto.
+Qed.
 
 Lemma eval_to_lc : forall e1 e2,
   eval e1 e2 -> lc e1 /\ lc e2.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros e1 e2 H. induction H; try inversion IHeval; split; eauto using value_to_lc, open_abs.
+Qed.
 
 Lemma typing_to_lc : forall E e T,
   typing E e T -> lc e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  (* SOLUTION *)
+  intros E e T H. induction H; eauto.
+Qed.
 
 (*************************************************************************)
 (** * Decidability of Typechecking *)
@@ -1814,7 +2051,20 @@ Lemma typing_c_unique : forall E e T1 T2,
   typing_c E e T2 ->
   T1 = T2.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+(* SOLUTION *)
+  intros E e T1 T2 Typ1 Typ2.
+  generalize dependent T2.
+  induction Typ1; intros T' Typ'; inversion Typ'; subst; eauto.
+  Case "typing_var_c".
+    eapply binds_unique; eauto.
+  Case "typing_abs_c".
+    f_equal; eauto.
+    pick fresh x.
+    apply (H0 x); eauto.
+  Case "typing_app_c".
+    assert (typ_arrow T1 T2 = typ_arrow T0 T') by auto.
+    inversion H; eauto.
+Qed.
 
 
 (* A property P is decidable if we can show the proposition P \/ ~P. *)
