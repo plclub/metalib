@@ -281,7 +281,7 @@ Abort.
     missing fact we need is that [G0 = (G ++ E)].
 
     The problem here arises from the fact that Coq's [induction]
-    tactic let's us only prove something about all typing derivations.
+    tactic lets us only prove something about all typing derivations.
     While it's clear to us that weakening applies to all typing
     derivations, it's not clear to Coq, because the context is
     written using concatenation.  The [induction] tactic expects that
@@ -517,14 +517,13 @@ Qed. (* /ADMITTED *)
       - Use the lemma proved above for the [typing_var] case.
 
       - The [typing_abs] case follows from the induction hypothesis.
-         -- Use [simpl] to simplify the substitution.
+          -- Use [simpl] to simplify the substitution.
 
-          -- In order to use the induction hypothesis, use
-             [subst_open_var_c] to push the substitution under the
-             opening operation.
+          -- In order to use the induction hypothesis, use [subst_var]
+             to push the substitution under the opening operation.
 
-          -- Recall the lemma [typing_to_lc_c] and the
-             [rewrite_env] and [simpl_env] tactics.
+          -- Recall the lemma [typing_to_lc_c] and the [rewrite_env]
+             and [simpl_env] tactics.
 
       - The [typing_app] case follows from the induction hypotheses.
         Use [simpl] to simplify the substitution.
@@ -555,7 +554,7 @@ Proof.
     apply H0.
       auto.
       simpl_env. reflexivity.
-    (* The following subgoals are from [rewrite subst_open_var]. *)
+    (* The following subgoals are from [rewrite subst_var]. *)
     auto.
     eapply typing_to_lc_exp. apply Hu.
   - Case "typing_app".
@@ -624,9 +623,9 @@ Qed. (* /ADMITTED *)
              hypothesis about when the body of the abstraction is
              well-typed.
 
-          -- Use [subst_intro] to rewrite the [open] operation into an
-             [open] followed by a [subst].  You'll need to pick a
-             fresh variable first.
+          -- Use [subst_exp_intro] to rewrite the [open] operation
+             into an [open] followed by a [subst].  You'll need to
+             pick a fresh variable first.
 
   *)
 
