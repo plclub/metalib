@@ -513,22 +513,19 @@ Qed. (* /ADMITTED *)
     should use [remember as] and [generalize dependent] in a manner
     similar to the proof of weakening.
 
-   HINTS:
-      - Use the lemma proved above for the [typing_var] case.
+   HINTS: - Use the lemma proved above for the [typing_var] case.
 
       - The [typing_abs] case follows from the induction hypothesis.
-         -- Use [simpl] to simplify the substitution.
+      -- Use [simpl] to simplify the substitution.
 
-          -- In order to use the induction hypothesis, use
-             [subst_var] to push the substitution under the
-             opening operation.
+          -- In order to use the induction hypothesis, use [subst_var]
+             to push the substitution under the opening operation.
 
-          -- Recall the lemma [typing_to_lc_c] and the
-             [rewrite_env] and [simpl_env] tactics.
+          -- Recall the lemma [typing_to_lc_c] and the [rewrite_env]
+             and [simpl_env] tactics.
 
       - The [typing_app] case follows from the induction hypotheses.
-        Use [simpl] to simplify the substitution.
-*)
+        Use [simpl] to simplify the substitution.  *)
 
 Lemma typing_subst : forall (E F : ctx) e u S T (z : atom),
   typing (F ++ (z ~ S) ++ E) e T ->
@@ -624,9 +621,9 @@ Qed. (* /ADMITTED *)
              hypothesis about when the body of the abstraction is
              well-typed.
 
-          -- Use [subst_intro] to rewrite the [open] operation into an
-             [open] followed by a [subst].  You'll need to pick a
-             fresh variable first.
+          -- Use [subst_exp_intro] to rewrite the [open] operation
+             into an [open] followed by a [subst].  You'll need to
+             pick a fresh variable first.
 
   *)
 
