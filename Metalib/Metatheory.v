@@ -11,23 +11,11 @@ Require Export Coq.FSets.FSets.
 Require Export Coq.Lists.List.
 
 Require Export Metalib.AssocList.
-(* Require Export Metalib.CoqEqDec. *)
+Require Export Metalib.CoqEqDec.
 Require Export Metalib.CoqListFacts.
 Require Export Metalib.LibTactics.
 Require Export Metalib.MetatheoryAtom.
 
-
-
-
-(* ********************************************************************** *)
-(** * Decidable equality *)
-
-(** We prefer that "==" refer to decidable equality at [eq], as
-    defined by the [EqDec_eq] class from the CoqEqDec library. *)
-
-Notation " x  == y " := (AtomImpl.eq_dec x y) (at level 70) : coqeqdec_scope.
-
-Open Scope coqeqdec_scope.
 
 
 (* ********************************************************************** *)
@@ -241,9 +229,9 @@ Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin.
     use [auto with set]. *)
 
 Hint Resolve
-  AtomSetFacts.add_1 AtomSetFacts.add_2 AtomSetFacts.remove_1
-  AtomSetFacts.remove_2 AtomSetFacts.singleton_2 AtomSetFacts.union_2
-  AtomSetFacts.union_3 AtomSetFacts.inter_3 AtomSetFacts.diff_3.
+  AtomSetImpl.add_1 AtomSetImpl.add_2 AtomSetImpl.remove_1
+  AtomSetImpl.remove_2 AtomSetImpl.singleton_2 AtomSetImpl.union_2
+  AtomSetImpl.union_3 AtomSetImpl.inter_3 AtomSetImpl.diff_3.
 
 
 (* ********************************************************************** *)

@@ -146,12 +146,10 @@ Import StlcNotations.
 
 (** For the examples below, we introduce some sample variable names to
     play with. *)
-Parameter X : var.
-Parameter Y : var.
-Parameter Z : var.
-Parameter FrXY : X <> Y.
-Parameter FrXZ : X <> Z.
-Parameter FrYZ : Y <> Z.
+
+Definition X : atom := fresh nil.
+Definition Y : atom := fresh (X :: nil).
+Definition Z : atom := fresh (X :: Y :: nil).
 
 (*************************************************************************)
 (** ** Encoding STLC terms *)

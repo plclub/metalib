@@ -12,18 +12,18 @@
 
     Implicit arguments are declared by default in this library. *)
 
-Require Import Coq.MSets.MSets.
+Require Import Coq.FSets.FSetInterface.
 
-Require Import Metalib.CoqMSetDecide.
+Require Import Metalib.CoqFSetDecide.
 
 
 (* *********************************************************************** *)
 (** * Implementation *)
 
 Module Notin_fun
-  (E : DecidableType) (Import X : CoqMSetInterface.WSetsOn E).
+  (E : DecidableType) (Import X : FSetInterface.WSfun E).
 
-Module Import D := CoqMSetDecide.WDecide_fun E X.
+Module Import D := CoqFSetDecide.WDecide_fun E X.
 
 
 (* *********************************************************************** *)
@@ -212,9 +212,6 @@ Ltac destruct_notin :=
     then tries some simple heuristics for solving the resulting
     goals. *)
 
-Hint Resolve (E.eq_equiv.(@Equivalence_Reflexive _ _)) : Auto_notin.
-Hint Immediate (E.eq_equiv.(@Equivalence_Symmetric _ _)) : Auto_notin.
-
 Ltac solve_notin :=
   intros;
   destruct_notin;
@@ -223,7 +220,7 @@ Ltac solve_notin :=
                | apply notin_singleton_2
                | apply notin_empty_1
                ];
-  auto with Auto_notin;
+  auto;
   try tauto;
   fail "Not solvable by [solve_notin]; try [destruct_notin]".
 

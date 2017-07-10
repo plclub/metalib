@@ -16,14 +16,14 @@
 (** A library for association lists, i.e., lists of pairs *)
 
 
-Require Import Coq.MSets.MSets.
+Require Import Coq.FSets.FSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 
 Require Import Metalib.CoqFSetDecide.
 Require Import Metalib.CoqListFacts.
 Require Import Metalib.LibTactics.
-Require Import Metalib.CoqMSetInterface.
+Require Import Metalib.CoqFSetInterface.
 
 
 (* *********************************************************************** *)
@@ -65,13 +65,28 @@ Require Import Metalib.CoqMSetInterface.
      - No real support for [maps].
      - No support for permutations. *)
 
+
+Require Import Coq.Classes.Equivalence.
+Require Import Coq.Classes.EquivDec.
+Require Import Metalib.CoqEqDec.
+
+
 Module Make
   (X : UsualDecidableType)
-  (Import KeySet : CoqMSetInterface.WSetsOn X).
+  (KeySet : FSetInterface.WSfun X).
+
+(* SCW: Make an instance of EqDef_eq for X so that we can use the "==" in [get] below. *)
+Instance EqDec_of_X : @EqDec X.t eq eq_equivalence.
+Proof. exact X.eq_dec. Qed.
+Instance EqDec_eq_of_X: @EqDec_eq X.t.
+Proof. exact (EqDec_eq_of_EqDec X.t EqDec_of_X). Qed.
+Open Scope coqeqdec_scope.
+
+Import KeySet.
 
 Module Import D := CoqFSetDecide.WDecide_fun X KeySet.
-Module KeySetProperties := MSetProperties.WPropertiesOn X KeySet.
-Module KeySetFacts := MSetFacts.WFactsOn X KeySet.
+Module KeySetProperties := FSetProperties.WProperties_fun X KeySet.
+Module KeySetFacts := FSetFacts.WFacts_fun X KeySet.
 
 
 (* *********************************************************************** *)
@@ -117,7 +132,7 @@ Fixpoint get
   : option C :=
   match E with
     | nil => None
-    | (y, c) :: F => if X.eq_dec x y then Some c else get x F
+    | (y, c) :: F => if (x == y) then Some c else get x F
   end.
 
 (** [binds] is a ternary predicate that holds when a key-value pair
@@ -210,7 +225,7 @@ Section ListProperties.
     List.In x (one y) <-> x = y.
   Proof.
     clear. split.
-      inversion 1 as [ | HIn]; intuition. inversion HIn.
+      inversion 1 as [ | HIn]; intuition.
       constructor; intuition.
   Qed.
 
@@ -514,7 +529,7 @@ Section UniqProperties.
     uniq (x ~ b).
   Proof.
     clear. rewrite_alist ((x ~ b) ++ nil).
-    apply uniq_push. apply uniq_nil. apply F.empty_1.
+    apply uniq_push. apply uniq_nil. apply empty_1.
   Qed.
 
   Lemma uniq_cons_1 :
@@ -1160,8 +1175,8 @@ Section BindsDerived.
   Proof.
     clear. alist induction E as [ | y b F IH ]; intros J.
       simpl_alist in J. fsetdec.
-      simpl_alist in J. apply F.union_1 in J. destruct J as [J | J].
-        exists b. apply F.singleton_1 in J. auto.
+      simpl_alist in J. apply union_1 in J. destruct J as [J | J].
+        exists b. apply singleton_1 in J. auto.
         apply IH in J. destruct J. eauto.
   Qed.
 

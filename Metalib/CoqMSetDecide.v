@@ -23,12 +23,12 @@
 (** This file implements a decision procedure for a certain
     class of propositions involving finite sets.  *)
 
-Require Import Decidable DecidableTypeEx FSetFacts Setoid.
+Require Import Decidable DecidableTypeEx MSetFacts Setoid.
 
 (** First, a version for Weak Sets in functorial presentation *)
 
-Module WDecide_fun (E : DecidableType)(Import M : WSfun E).
- Module F :=  FSetFacts.WFacts_fun E M.
+Module WDecide_fun (E : DecidableType)(Import M : WSetsOn E).
+ Module F :=  MSetFacts.WFactsOn E M.
 
 (** * Overview
     This functor defines the tactic [fsetdec], which will
@@ -82,7 +82,7 @@ the above form:
 - A conjunction of hypotheses will be handled as easily as
   separate hypotheses, i.e., [P1 /\ P2 -> P] can be solved iff
   [P1 -> P2 -> P] can be solved.
-- [fsetdec] should solve any goal if the FSet-related hypotheses
+- [fsetdec] should solve any goal if the MSet-related hypotheses
   are contradictory.
 - [fsetdec] will first perform any necessary zeta and beta
   reductions and will invoke [subst] to eliminate any Coq
@@ -631,9 +631,8 @@ the above form:
     (** Here is the crux of the proof search.  Recursion through
         [intuition]!  (This will terminate if I correctly
         understand the behavior of [intuition].) *)
-    Hint Resolve E.eq_refl : FSet_Auto.
-    (* SCW: to change to MSets, replace with this.
-    Hint Resolve (E.eq_equiv.(@Equivalence_Reflexive _ _)) : FSet_Auto. *)
+    (* SCW: to change to MSets *)
+    Hint Resolve (E.eq_equiv.(@Equivalence_Reflexive _ _)) : FSet_Auto.
     Ltac fsetdec_rec :=
       auto with FSet_Auto;
       subst++;
@@ -892,12 +891,12 @@ the above form:
 
 End WDecide_fun.
 
-Require Import CoqFSetInterface.
+Require Import CoqMSetInterface.
 
 (** Now comes variants for self-contained weak seCts and for full sets.
     For these variants, only one argument is necessary. Thanks to
     the subtyping [WS<=S], the [Decide] functor which is meant to be
     used on modules [(M:S)] can simply be an alias of [WDecide]. *)
 
-Module WDecide (M:WS) := !WDecide_fun M.E M.
+Module WDecide (M:WSets) := !WDecide_fun M.E M.
 Module Decide := WDecide.

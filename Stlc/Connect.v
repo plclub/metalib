@@ -3,7 +3,7 @@
 (***********************************************************************)
 
 (** Our final goal is to show that the abstract nominal machine
-    implements the same semantics as the LN substitution based small step
+    implements the same semantics as the LN substitution-based small step
     relation. *)
 
 Require Import Metalib.Metatheory.
@@ -56,6 +56,7 @@ Definition decode (c:conf) : exp  :=
   end.
 
 
+
 (***********************************************************************)
 (** * Demo: connecting free variable functions.                          *)
 (***********************************************************************)
@@ -88,9 +89,8 @@ Hint Resolve fv_nom_fv_exp_eq : lngen.
 
      - [default_simp]: above plus case analysis for booleans and other sums
 
-    The behavior of these tactics can be modified by updating the
-    following two definitions.
-*)
+    Below, we modify he behavior of these tactics by updating the following
+    two definitions, so that the lngen hint databases will be avilable.  *)
 
 Ltac default_auto        ::= auto with lngen.
 Ltac default_autorewrite ::= autorewrite with lngen.
@@ -472,7 +472,7 @@ Inductive scoped_conf : atoms -> conf -> Prop :=
 
 (* Could be zero or one steps! *)
 Lemma simulate_step : forall D h e s h' e' s' ,
-    machine_step (dom h \u D) (h,e,s) = TakeStep _ (h',e',s') ->
+    machine_step D (h,e,s) = TakeStep _ (h',e',s') ->
     scoped_conf D (h,e,s) ->
     decode (h,e,s) = decode (h',e',s') \/
     step (decode (h,e,s)) (decode (h',e',s')).
@@ -486,17 +486,17 @@ Proof.
   - destruct f eqn:?.
     + destruct e eqn:?; try solve [inversion STEP].
        right.
-       destruct AtomSetProperties.In_dec;
-       try destruct atom_fresh;
-       inversion STEP; subst; clear STEP;
-       simpl in *;
-       rewrite combine;
-       rewrite apply_stack_fresh_eq; auto; try fsetdec;
-       apply apply_stack_cong;
-       autorewrite with lngen in *;
-       simpl.
+       destruct AtomSetProperties.In_dec.
+       * destruct atom_fresh.
+         inversion STEP; subst; clear STEP.
+         simpl in *;
+           rewrite combine;
+           rewrite apply_stack_fresh_eq; auto; try fsetdec.
+         apply apply_stack_cong.
+         autorewrite with lngen in *;
+           simpl.
 
-       -- assert (x <> x0) by fsetdec.
+         assert (x <> x0) by fsetdec.
           rewrite <- swap_spec; auto; try fsetdec.
           rewrite (subst_exp_spec _ _ x).
           autorewrite with lngen; auto with lngen.
@@ -509,7 +509,16 @@ Proof.
           auto with lngen.
 
           rewrite H4. fsetdec.
-       -- rewrite subst_exp_spec.
+      * inversion STEP; subst; clear STEP;
+       simpl in *;
+       rewrite combine;
+       rewrite apply_stack_fresh_eq; auto; try fsetdec.
+       apply apply_stack_cong;
+       autorewrite with lngen in *;
+       simpl.
+
+
+       rewrite subst_exp_spec.
           rewrite apply_heap_open; auto with lngen.
 
           apply step_beta; auto with lngen.

@@ -12,10 +12,10 @@ Require Import Coq.Classes.EquivDec.
 Require Import Coq.Lists.List.
 Require Import Coq.Structures.Equalities.
 
-Require Import Coq.MSets.MSets.
+Require Import Coq.FSets.FSets.
 Require Import Metalib.CoqListFacts.
-Require Import Metalib.MSetExtra.
-Require Import Metalib.MSetWeakNotin.
+Require Import Metalib.FSetExtra.
+Require Import Metalib.FSetWeakNotin.
 Require Import Metalib.LibTactics.
 
 Require Import Omega.
@@ -36,14 +36,17 @@ Module Type ATOM <: UsualDecidableType.
   Parameter eq_dec : forall x y : t, {x = y} + {x <> y}.
   Hint Resolve eq_dec.
 
-  Parameter fresh : list t -> t.
-
-  Parameter fresh_not_in : forall l, ~ In (fresh l) l.
-
   Parameter atom_fresh_for_list :
     forall (xs : list t), {x : t | ~ List.In x xs}.
 
+  Parameter fresh : list atom -> atom.
+
+  Parameter fresh_not_in : forall l, ~ In (fresh l) l.
+
+  Hint Resolve eq_dec.
+
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
+
 
 End ATOM.
 
@@ -85,26 +88,26 @@ Module AtomImpl : ATOM.
     exists (S x). intros J. lapply (H (S x)). omega. trivial.
   Qed.
 
-  Definition fresh ( xs : list nat ) : nat :=
-    match atom_fresh_for_list xs with
-    | ( exist _ n _ ) => n
+  Definition fresh (l : list atom) :=
+    match atom_fresh_for_list l with
+      (exist _ x _) => x
     end.
 
-  Lemma fresh_not_in : forall xs, ~ In (fresh xs) xs.
+  Lemma fresh_not_in : forall l, ~ In (fresh l) l.
   Proof.
-    intros xs.
-    unfold fresh.
-    destruct (atom_fresh_for_list xs).
-    auto.
+    intro l. unfold fresh.
+    destruct atom_fresh_for_list. auto.
   Qed.
-  (* end hide *)
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
+  (* end hide *)
+
 End AtomImpl.
 
-(** We make [atom], [fresh], [fresh_notin] and [atom_fresh_for_list] available without
-    qualification. *)
+(** We make [atom], [eq_atom_dec], and [atom_fresh_for_list] available
+    without qualification. *)
+
 Notation atom := AtomImpl.atom.
 Notation fresh := AtomImpl.fresh.
 Notation fresh_not_in := AtomImpl.fresh_not_in.
@@ -128,8 +131,8 @@ Proof. exact AtomImpl.eq_dec. Defined.
     this library.  In order to avoid polluting Coq's namespace, we do
     not use [Module Export]. *)
 
-Module Import AtomSetImpl : MSetExtra.WSfun AtomImpl :=
-  MSetExtra.Make AtomImpl.
+Module Import AtomSetImpl : FSetExtra.WSfun AtomImpl :=
+  FSetExtra.Make AtomImpl.
 
 Notation atoms :=
   AtomSetImpl.t.
@@ -137,34 +140,26 @@ Notation atoms :=
 (** The [AtomSetDecide] module provides the [fsetdec] tactic for
     solving facts about finite sets of atoms. *)
 
-Module Export AtomSetDecide := Coq.MSets.MSetDecide.WDecideOn AtomImpl AtomSetImpl.
+Module Export AtomSetDecide := Coq.FSets.FSetDecide.WDecide_fun AtomImpl AtomSetImpl.
 
 (** The [AtomSetNotin] module provides the [destruct_notin] and
     [solve_notin] for reasoning about non-membership in finite sets of
     atoms, as well as a variety of lemmas about non-membership. *)
 
-Module Export AtomSetNotin := MSetWeakNotin.Notin_fun AtomImpl AtomSetImpl.
+Module Export AtomSetNotin := FSetWeakNotin.Notin_fun AtomImpl AtomSetImpl.
 
 (** Given the [fsetdec] tactic, we typically do not need to refer to
     specific lemmas about finite sets.  However, instantiating
-    functors from the MSets library makes a number of setoid rewrites
+    functors from the FSets library makes a number of setoid rewrites
     available.  These rewrites are crucial to developments since they
     allow us to replace a set with an extensionally equal set (see the
     [Equal] relation on finite sets) in propositions about finite
     sets. *)
 
-Module AtomSetFacts := MSetFacts.WFactsOn AtomImpl AtomSetImpl.
-Module AtomSetProperties := MSetProperties.WPropertiesOn AtomImpl AtomSetImpl.
+Module AtomSetFacts := FSetFacts.WFacts_fun AtomImpl AtomSetImpl.
+Module AtomSetProperties := FSetProperties.WProperties_fun AtomImpl AtomSetImpl.
 
-(** SCW: Switching from FSets to MSets lost the following setiod relation. *)
-
-Add Relation atoms AtomSetImpl.Subset
- reflexivity proved by AtomSetFacts.Subset_refl
- transitivity proved by AtomSetFacts.Subset_trans
- as SubsetSetoid.
-
-(** SCW: Should we do this? The FSets based version did by default. *)
-(* Export AtomSetFacts. *)
+Export AtomSetFacts.
 
 (* ********************************************************************** *)
 (** * Properties *)
@@ -176,7 +171,7 @@ Lemma atom_fresh : forall L : atoms, { x : atom | ~ In x L }.
 Proof.
   intros L. destruct (atom_fresh_for_list (elements L)) as [a H].
   exists a. intros J. contradiction H.
-  rewrite <- CoqListFacts.InA_iff_In. auto using @F.elements_1.
+  rewrite <- CoqListFacts.InA_iff_In. auto using elements_1.
 Qed.
 
 
