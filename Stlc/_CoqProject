@@ -1,7 +1,6 @@
 -R . Stlc
 Definitions.v
 Lemmas.v
-Classes.v
 Lec1.v
 Lec1_full.v
 Lec1_sol.v
