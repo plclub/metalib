@@ -2,9 +2,13 @@
 (**  * Connecting nominal and LN semantics *)
 (***********************************************************************)
 
-(** Our final goal is to show that the abstract nominal machine
-    implements the same semantics as the LN substitution-based small step
-    relation. *)
+(** Our final goal is to show that the abstract nominal machine implements the
+    same semantics as the LN substitution-based small step relation.
+
+    We'll do this by proving that any time the abstract machine takes a step,
+    we can decode the machine configuration before and after to LN
+    expressions, and those expressions are either identical or related by the
+    LN step relation.   *)
 
 Require Import Metalib.Metatheory.
 
@@ -50,7 +54,7 @@ Fixpoint apply_stack h (s : list frame) (e :exp) : exp :=
   | n_app2 e' :: s' => apply_stack h s' (app e (apply_heap h (nom_to_exp e')))
   end.
 
-Definition decode (c:conf) : exp  :=
+Definition decode (c:configuration) : exp  :=
   match c with
   | (h,e,s) => apply_stack h s (apply_heap h (nom_to_exp e))
   end.
@@ -90,7 +94,7 @@ Hint Resolve fv_nom_fv_exp_eq : lngen.
      - [default_simp]: above plus case analysis for booleans and other sums
 
     Below, we modify he behavior of these tactics by updating the following
-    two definitions, so that the lngen hint databases will be avilable.  *)
+    two definitions, so that the lngen hint databases will be available.  *)
 
 Ltac default_auto        ::= auto with lngen.
 Ltac default_autorewrite ::= autorewrite with lngen.
@@ -201,7 +205,7 @@ Qed.
     It shows that the stack does behave like an evaluation context,
     lifting a small-step reduction to a larger term.
 
-    Which properties above does this proof implicitly rely on?
+    Q: Which properties above does this proof implicitly rely on?
  *)
 
 
@@ -235,7 +239,7 @@ Inductive scoped_heap (D : atoms) : heap -> Prop :=
       scoped_heap D ((x,e)::h).
 
 
-(** Exercise [apply_heap_get]
+(** Exercise [apply_heap_get]  (recommended)
 
     We can use get to look up expressions in the heap. However, to know that
     we have the right result we need to know that the heap is well-scoped, i.e.
@@ -298,9 +302,10 @@ Lemma apply_stack_fresh_eq : forall s x e1 h ,
     x `notin` fv_stack s ->
     apply_stack ((x, e1) :: h) s = apply_stack h s.
 Proof.
+  (* WORKINCLASS *)
   induction s; intros; try destruct a; default_simp.
   rewrite IHs; auto.
-Qed.
+Qed. (* /WORKINCLASS *)
 
 (***********************************************************************)
 (** * Connecting "freshening" *)
@@ -344,6 +349,7 @@ Proof.
   induction e; default_simp.
 Qed.
 
+
 Hint Rewrite swap_size_eq : lngen.
 Hint Resolve le_S_n : lngen.
 
@@ -377,16 +383,20 @@ Proof.
               fv_exp (nom_to_exp t) \u
               fv_exp (nom_to_exp (swap w y t)) \u {{w}} \u {{y}}).
 
+       (* Use the lemma above to change out the closed variables with
+          the fresh one. *)
        rewrite (close_exp_wrt_exp_freshen y z); auto.
-       rewrite subst_exp_close_exp_wrt_exp; auto.
-
-       rewrite IHm; auto with lngen.
        rewrite (close_exp_wrt_exp_freshen w z); auto.
 
+       rewrite subst_exp_close_exp_wrt_exp; auto.
+
+       (* Now use IH three times to rearrange the swaps and substitutions. *)
        rewrite IHm; default_steps.
+       rewrite IHm; default_steps. (* Generates a freshness obligation. *)
        rewrite IHm; default_steps.
        rewrite shuffle_swap; auto.
 
+       (* show freshness *)
        rewrite <- fv_nom_fv_exp_eq.
        apply fv_nom_swap.
        rewrite fv_nom_fv_exp_eq.
@@ -463,7 +473,7 @@ Qed. (* /ADMITTED *)
 (** * SIMULATION                                                       *)
 (***********************************************************************)
 
-Inductive scoped_conf : atoms -> conf -> Prop :=
+Inductive scoped_conf : atoms -> configuration -> Prop :=
   scoped_conf_witness : forall D h e s,
     scoped_heap D h ->
     fv_exp (nom_to_exp e) [<=] dom h \u D ->
@@ -485,58 +495,74 @@ Proof.
   - inversion STEP.
   - destruct f eqn:?.
     + destruct e eqn:?; try solve [inversion STEP].
-       right.
-       destruct AtomSetProperties.In_dec.
-       * destruct atom_fresh.
-         inversion STEP; subst; clear STEP.
-         simpl in *;
-           rewrite combine;
-           rewrite apply_stack_fresh_eq; auto; try fsetdec.
-         apply apply_stack_cong.
-         autorewrite with lngen in *;
-           simpl.
+      right.
+      destruct AtomSetProperties.In_dec.
+      * (* Application case, we need to generate a fresh
+           variable. *)
 
-         assert (x <> x0) by fsetdec.
-          rewrite <- swap_spec; auto; try fsetdec.
-          rewrite (subst_exp_spec _ _ x).
-          autorewrite with lngen; auto with lngen.
-          default_simp.
-          rewrite subst_exp_fresh_eq; autorewrite with lngen; auto.
+        destruct atom_fresh.
+        inversion STEP; subst; clear STEP.
 
-          apply step_beta; auto with lngen.
-          rewrite <- apply_heap_abs.
-          eapply apply_heap_lc.
-          auto with lngen.
+        (* simplify the context. *)
+        simpl in *; autorewrite with lngen in *.
+        (* but not too much *)
+        rewrite combine.
 
-          rewrite H4. fsetdec.
-      * inversion STEP; subst; clear STEP;
-       simpl in *;
-       rewrite combine;
-       rewrite apply_stack_fresh_eq; auto; try fsetdec.
-       apply apply_stack_cong;
-       autorewrite with lngen in *;
-       simpl.
+        (* x0 is a fresh variable, so we can drop it from
+           the heap in apply_stack. *)
+        rewrite apply_stack_fresh_eq; auto; try fsetdec.
+        (* before and after confs use the same stack. So we can step
+           congruently. *)
+        apply apply_stack_cong.
 
+        simpl.
 
-       rewrite subst_exp_spec.
-          rewrite apply_heap_open; auto with lngen.
+        (* pull the swap out as a freshening substitution *)
+        assert (x <> x0) by fsetdec.
+        rewrite <- swap_spec; auto; try fsetdec.
+        rewrite (subst_exp_spec _ _ x).
+        autorewrite with lngen; auto with lngen.
+        default_simp.
+        rewrite subst_exp_fresh_eq; autorewrite with lngen; auto.
 
-          apply step_beta; auto with lngen.
-          rewrite <- apply_heap_abs.
-          eapply apply_heap_lc.
-          auto with lngen.
+        (* in the form that matches step beta *)
+        apply step_beta; auto with lngen.
+        rewrite <- apply_heap_abs.
+        eapply apply_heap_lc.
+        auto with lngen.
 
+        rewrite H4. fsetdec.
+      * (* Homework: Application case, the variable in the abstraction
+           is fresh enough. *)
+        (* ADMIT *)
+        inversion STEP; subst; clear STEP;
+          simpl in *;
+          rewrite combine;
+          rewrite apply_stack_fresh_eq; auto; try fsetdec.
+        apply apply_stack_cong;
+          autorewrite with lngen in *;
+          simpl.
+        rewrite subst_exp_spec.
+        rewrite apply_heap_open; auto with lngen.
+
+        apply step_beta; auto with lngen.
+        rewrite <- apply_heap_abs.
+        eapply apply_heap_lc.
+        auto with lngen.
+        (* /ADMIT *)
   - destruct e eqn:?; try solve [inversion STEP].
-    + destruct (get x h) eqn:?; inversion STEP; subst; clear STEP.
+    + (* Expression is a variable, lookup in heap *)
+      destruct (get x h) eqn:?; inversion STEP; subst; clear STEP.
       left.
       f_equal.
       apply apply_heap_get with (D:= D); auto.
-    + inversion STEP; subst; clear STEP.
+    + (* Expression is an application, push arg on stack *)
+      inversion STEP; subst; clear STEP.
       left.
       simpl.
       rewrite apply_heap_app.
       auto.
-Qed.
+(* ADMITTED *) Qed. (* /ADMITTED *)
 
 (** Exercise [simulate_done]
 
@@ -629,6 +655,11 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (***********************************************************************)
+
+(** Challenge exercise [machine_is_scoped]
+
+    Show that the abstract machine is scoped, then any resulting
+    configurations are also scoped. *)
 
 Lemma machine_is_scoped: forall D h e s conf',
     machine_step (dom h \u D) (h,e,s) = TakeStep _ conf' ->

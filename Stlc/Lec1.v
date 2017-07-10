@@ -28,22 +28,21 @@
             [ z ~> \x.y ](\y.z)     should be     \y1.\x.y
 *)
 
-(** ** Aproaches to variable binding *)
+(** ** Approaches to variable binding *)
 
-(** Unfortunately, variable binding is an _old_ problem. The issue isn't
-    that we don't know how to solve this problem, in fact we known _many_,
-    _many_ different ways to solve this problem and they all have their
-    trade offs.  We won't include an entire taxonomy of solutions here, but
-    before we go further, I want to mention a few relevant alternatives.
+(** Unfortunately, variable binding is an _old_ problem. The issue isn't that
+    we don't know how to solve this problem, in fact there are _many_, _many_
+    different ways to solve this problem and they all have their trade offs.
+    I won't include an entire taxonomy of solutions here, but before we go
+    further, I want to mention a few relevant alternatives.
 
     - Only working with closed terms, never reasoning about equivalence
 
-    If we never have to substitute an _open_ term, then we never have to
-    worry about variable capture. We can represent binding variables in
-    lambda terms using names in a straightforward manner. This approach is
-    the simplest and side-steps the two problems shown above. For example,
-    it can be used to show type soundess, as is done in Software
-    Foundations.
+    If we never have to substitute an _open_ term, then we never have to worry
+    about variable capture. We can represent binding variables in lambda terms
+    using names in a straightforward manner. This approach is the simplest and
+    side-steps the two problems shown above. For example, it can be used to
+    show type soundness, as is done in Software Foundations.
 
     However, this approach does not scale. For example, reasoning about
     compiler optimizations requires reasoning about the equivalence of
@@ -58,26 +57,24 @@
 
     - Locally nameless representation (LN)
 
-    When working in Coq, it is convenient to use a representation that
-    makes all alpha-equivalent terms _definitionally_ equivalent. LN does
-    this while still providing an interface that is mostly similar to paper
-    proofs.
+    When working in Coq, it is convenient to use a representation that makes
+    all alpha-equivalent terms _definitionally_ equivalent. LN does this while
+    still providing an interface that is mostly similar to paper proofs.
 
 Other approaches to variable binding include: de Bruijn indices, de Bruijn
-levels, weak HOAS, PHOAS, locally named, canonically named... etc. Of
-these, de Bruijn representations are by far the most commonly used
-representation in Coq.
+levels, weak HOAS, PHOAS, locally named, canonically named... etc. Of these,
+de Bruijn representations are by far the most commonly used representation in
+Coq.
 
 (** ** Overview *)
 
-In this tutorial, we will promote the following approach to variable
-binding.
+In this tutorial, we will promote the following approach to variable binding.
 
 - Use a locally nameless representation to _specify_ and reason about the
   semantics
 
-- Use a named representation to _implement_ environment-based interpreters
-  for lambda calculus terms. If binders are mostly unique, then this
+- Use a named representation to _implement_ environment-based interpreters for
+  lambda calculus terms. If binders are mostly unique, then this
   implementation avoids additional work.
 
 - The definitions, lemmas and proofs that are needed to work with
@@ -89,36 +86,35 @@ nameless representation to reason about a specification of a call-by-name
 lambda calculus. We will state the operational semantics of this language
 using a small-step substitution-based inductive relation.  We will use this
 specification for metatheoretic reasoning: we will prove _preservation_ and
-_progress_.
+_progress_ as in Software Foundations.
 
-Next, we will represent the same language using a _nominal representation_
-but specific the semantics using an abstract machine. This abstract machine
-is given as a Coq function from machine configurations to machine
-configurations, and can be used in an efficient interpreter. This abstract
-machine features a heap (i.e. runtime environment for variables), so we
-will not need to define capture-avoiding substitution as part of our
-semantics.
+Next, we will represent the same language using a _nominal representation_ but
+specify the semantics using an abstract machine. This abstract machine is
+given as a Coq function from machine configurations to machine configurations,
+and can be used as an efficient interpreter. This abstract machine features a
+heap (i.e. runtime environment for variables) so we will not need to define
+capture-avoiding substitution as part of our semantics.
 
-Finally, we will prove that the abstract machine implements the same
-semantics as the locally nameless based substitution semantics.
+Finally, we will prove that the abstract machine implements the same semantics
+as the locally nameless based substitution semantics.
 
 (** ** Tool support *)
 
 The development of this tutorial draws from two coordinating tools that
 support working with LN representations.
 
-The Ott tool provides a direct way of generating LN language definitions
-from a simple specification language.  The file [stlc.ott] contains the
-input specification of the language of this tutorial.  [Definitions.v] is a
+The Ott tool provides a direct way of generating LN language definitions from
+a simple specification language.  The file [stlc.ott] contains the input
+specification of the language of this tutorial.  [Definitions.v] is a
 commented version of the Ott output. (For comparison, the raw output is in
-[Stlc.v]).  The same specifications can also be used to produce LaTeX
-macros for typesetting language definitions, demonstrated in [stlc.pdf].
+[Stlc.v]).  The same specifications can also be used to produce LaTeX macros
+for typesetting language definitions, demonstrated in [stlc.pdf].
 
 
 The LNgen tool works with Ott to generate a number of lemmas and auxiliary
 definitions for working with LN terms. The file [Lemmas.v] is commented
-version of that output. (For comparison, the raw output is in
-[Stlc_inf.v].) *)
+version of that output. (For comparison, the raw output is in [Stlc_inf.v].)
+*)
 
 (*************************************************************************)
 (** * The simply-typed lambda calculus in Coq. *)
@@ -158,8 +154,8 @@ Definition Z : atom := fresh (X :: Y :: nil).
 
 (** We start with examples of encodings in STLC.
 
-  For example, we can encode the expression (\x. Y x) as below. We use the
-  index 0 because it irefers to the closest abs to the bound variable
+  For example, we can encode the expression [(\x. Y x)] as below. We use the
+  index [0] because it refers to the closest [abs] to the bound variable
   occurrence. *)
 
 Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
@@ -169,7 +165,7 @@ Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
 
 
 
-(**  Here is another example: the encoding of (\x. \y. (y x)). *)
+(**  Here is another example: the encoding of [(\x. \y. (y x))].      *)
 
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 (**                      ^    ^              |         |              *)
@@ -181,7 +177,7 @@ Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 (** Finally, here is an example where the same bound variable has two
     different indices, and the same index refers to two different
     bound variables.
-                         \y. ((\x. (x y)) y)                          *)
+                         [\y. ((\x. (x y)) y)]                        *)
 
 Definition demo_rep3 :=
            abs (app (abs (app (var_b 0) (var_b 1))) (var_b 0)).
@@ -218,7 +214,6 @@ Definition COMB_S :=
 
 (* /SOLUTION *)
 
-(* FULL *)
 (** There are two important advantages of the locally nameless
     representation:
      - Alpha-equivalent terms have a unique representation.
@@ -236,7 +231,7 @@ Definition COMB_S :=
        substitution and reason about how these operations
        interact with each other.
 *)
-(* /FULL *)
+
 
 (*************************************************************************)
 (** ** Substitution *)
@@ -335,10 +330,9 @@ Qed. (* /ADMITTED *)
 (** ** Free variables *)
 (*************************************************************************)
 
-(** The function [fv] calculates the set of free variables in an expression.
-    This function returns a value of type `atoms` --- a finite set of
-    variable names.
- *)
+(** The function [fv_exp] calculates the set of free variables in an
+    expression.  This function returns a value of type `atoms` --- a finite
+    set of variable names.  *)
 
 (** Demo [fsetdec]
 
@@ -728,7 +722,7 @@ Proof.
     destruct (x0 == x); auto.
   - Case "lc_abs".
     simpl.
-    pick fresh x0 for {{x}}.  (* make sure that x0 <> x *)
+    pick fresh x0 for {{x}}.  (* a tactic to generate x0 <> x *)
     apply (lc_abs_exists x0).
     rewrite subst_var; auto.
   - Case "lc_app".

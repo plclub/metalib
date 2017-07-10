@@ -136,41 +136,6 @@ Proof.
 Qed.
 
 (*************************************************************************)
-(** * Tactic support *)
-(*************************************************************************)
-
-(** When picking a fresh var or applying a rule that uses cofinite
-    quantification, choosing a set of vars to be fresh for can be
-    tedious.  In practice, it is simpler to use a tactic to choose the
-    set to be as large as possible.
-
-    The tactic [gather_atoms] is used to collect together all the
-    atoms in the context.  It relies on an auxiliary tactic,
-    [gather_atoms_with] (from MetatheoryAtom), which maps a function
-    that returns a finite set of atoms over all hypotheses with the
-    appropriate type.
-*)
-
-Ltac gather_atoms ::=
-  let A := gather_atoms_with (fun x : atoms => x) in
-  let B := gather_atoms_with (fun x : atom => singleton x) in
-  let C := gather_atoms_with (fun x : list (var * typ) => dom x) in
-  let D := gather_atoms_with (fun x : exp => fv_exp x) in
-  constr:(A `union` B `union` C `union` D).
-
-(** A number of other, useful tactics are defined by the Metatheory
-    library, and each depends on [gather_atoms].  By redefining
-    [gather_atoms], denoted by the [::=] in its definition below, we
-    automatically update these tactics so that they use the proper
-    notion of "all atoms in the context."
-
-    For example, the tactic [(pick fresh x)] chooses an atom fresh for
-    "everything" in the context.  It is the same as [(pick fresh x for
-    L)], except where [L] has been computed by [gather_atoms].
-
-*)
-
-(*************************************************************************)
 (** * Typing relation and cofinite quantification *)
 (*************************************************************************)
 
@@ -590,7 +555,7 @@ Qed. (* /ADMITTED *)
 (** * Preservation *)
 (*************************************************************************)
 
-(** *** Take-home Exercise
+(** *** Exercise (Recommended)
 
     Complete the proof of preservation.  In this proof, we proceed by
     induction on the given typing derivation.  The induction
@@ -646,7 +611,7 @@ Proof.
     inversion J; subst; eauto.
     SCase "step_beta".
       inversion H; subst.
-      pick fresh y.
+      pick fresh y for (L \u fv_exp e0).
       rewrite (subst_exp_intro y); auto.
       eapply typing_subst_simple; auto.
 Qed. (* /ADMITTED *)
@@ -735,6 +700,43 @@ Qed. (* /ADMITTED *)
 
 
 (*************************************************************************)
+(** * Tactic support *)
+(*************************************************************************)
+
+(** When picking a fresh var or applying a rule that uses cofinite
+    quantification, choosing a set of vars to be fresh for can be
+    tedious.  In practice, it is simpler to use a tactic to choose the
+    set to be as large as possible.
+
+    The tactic [gather_atoms] is used to collect together all the
+    atoms in the context.  It relies on an auxiliary tactic,
+    [gather_atoms_with] (from MetatheoryAtom), which maps a function
+    that returns a finite set of atoms over all hypotheses with the
+    appropriate type.
+*)
+
+Ltac gather_atoms ::=
+  let A := gather_atoms_with (fun x : atoms => x) in
+  let B := gather_atoms_with (fun x : atom => singleton x) in
+  let C := gather_atoms_with (fun x : list (var * typ) => dom x) in
+  let D := gather_atoms_with (fun x : exp => fv_exp x) in
+  constr:(A `union` B `union` C `union` D).
+
+(** A number of other, useful tactics are defined by the Metatheory
+    library, and each depends on [gather_atoms].  By redefining
+    [gather_atoms], denoted by the [::=] in its definition below, we
+    automatically update these tactics so that they use the proper
+    notion of "all atoms in the context."
+
+    For example, the tactic [(pick fresh x)] chooses an atom fresh for
+    "everything" in the context.  It is the same as [(pick fresh x for
+    L)], except where [L] has been computed by [gather_atoms].
+
+*)
+
+
+
+(*************************************************************************)
 (** * Renaming *)
 (*************************************************************************)
 
@@ -800,7 +802,7 @@ Qed.
 
 
 (*************************************************************************)
-(** ** Demo: Exists-Fresh Definition *)
+(** ** Exercise: Exists-Fresh Definition *)
 (*************************************************************************)
 
 (** The use of cofinite quantification may make some people worry that we
@@ -823,18 +825,19 @@ Qed.
 Lemma exists_cofinite : forall E e T,
     typing_e E e T -> typing E e T.
 Proof.
+  (* ADMITTED *)
   intros.
   induction H; eauto.
   eapply typing_abs_exists with (x:=x); eauto.
-Qed.
+Qed. (* /ADMITTED *)
 
 Lemma cofinite_exists : forall G e T,
     typing G e T -> typing_e G e T.
-Proof.
+Proof. (* ADMITTED *)
   intros. induction H; eauto.
   pick fresh x.
   eapply typing_e_abs with (x:=x); eauto.
-Qed.
+Qed. (* /ADMITTED *)
 
 (***********************************************************************)
 (** ** Additional Exercises                                            *)

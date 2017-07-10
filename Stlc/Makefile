@@ -6,12 +6,15 @@ FULL    = Lec1 Lec2 Nominal Connect
 EXTRA   = Stlc.v Stlc_inf.v stlc.ott stlc.mng ottalt.sty listproc.sty stlc.pdf gen.mk
 DISTRIB = Definitions.v Lemmas.v README.md ../LICENSE
 
+ZIPNAME = DSSS.zip
+
 all: coq
 
 html: coq
 	make -f Stlc.mk html
 
 zip: $(DISTRIB) Stlc.mk stlc.pdf $(EXTRA) $(SOLS)
+	rm -f $(ZIPNAME)
 	mkdir -p Stlc
 	mkdir -p Stlc/sol
 	mkdir -p Stlc/extra
@@ -21,7 +24,9 @@ zip: $(DISTRIB) Stlc.mk stlc.pdf $(EXTRA) $(SOLS)
 	cp $(EXTRA) Stlc/extra
 	(cd Stlc; echo "-R . Stlc" > _CoqProject ; ls *.v >> _CoqProject)
 	(cd Stlc; coq_makefile -f _CoqProject > Makefile)
-	zip Stlc.zip Stlc/*
+	ln -s ../Metalib .
+	zip $(ZIPNAME) Stlc/* Stlc/extra/* Stlc/sol/* Metalib/*
+	rm Metalib
 
 zipclean:
 	rm -f Stlc.zip
