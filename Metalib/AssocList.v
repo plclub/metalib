@@ -641,6 +641,7 @@ Section BindsProperties.
   Variables f     : A -> B.
   Variables x y   : X.t.
   Variables a b   : A.
+  Variables b0    : B.
   Variables E F G : list (X.t*A).
 
   Lemma binds_nil_iff :
@@ -740,6 +741,20 @@ Section BindsProperties.
         left. congruence.
         right. auto.
   Qed.
+
+  Lemma binds_map_3 :
+    binds x b0 (map f E) ->
+    exists a, f a = b0 /\ binds x a E.
+  Proof.
+    alist induction E.
+    - inversion 1.
+    - unfold binds in *. simpl. intros [? | ?].
+      inversion H; subst.
+      exists a0. auto.
+      destruct IHl as [a1 [EQ B0]]; auto.
+      exists a1. auto.
+  Qed.
+
 
   Lemma binds_dom_contradiction : forall (E : list (X.t*A)),
     binds x a E ->
