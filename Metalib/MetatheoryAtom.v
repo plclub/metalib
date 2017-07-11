@@ -42,6 +42,8 @@ Module Type ATOM <: UsualDecidableType.
 
   Parameter fresh_not_in : forall l, ~ In (fresh l) l.
 
+  Parameter nat_of : atom -> nat.
+
   Hint Resolve eq_dec.
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
@@ -52,7 +54,7 @@ End ATOM.
 (** The implementation of the above interface is hidden for
     documentation purposes. *)
 
-Module AtomImpl : ATOM.
+Module Atom : ATOM.
 
   (* begin hide *)
   Definition atom := nat.
@@ -98,27 +100,29 @@ Module AtomImpl : ATOM.
     destruct atom_fresh_for_list. auto.
   Qed.
 
+  Definition nat_of := fun (x : atom) => x.
+
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
   (* end hide *)
 
-End AtomImpl.
+End Atom.
 
 (** We make [atom], [fresh], [fresh_not_in] and [atom_fresh_for_list] available
     without qualification. *)
 
-Notation atom := AtomImpl.atom.
-Notation fresh := AtomImpl.fresh.
-Notation fresh_not_in := AtomImpl.fresh_not_in.
-Notation atom_fresh_for_list := AtomImpl.atom_fresh_for_list.
+Notation atom := Atom.atom.
+Notation fresh := Atom.fresh.
+Notation fresh_not_in := Atom.fresh_not_in.
+Notation atom_fresh_for_list := Atom.atom_fresh_for_list.
 
 (* Automatically unfold Atom.eq *)
-Global Arguments AtomImpl.eq /.
+Global Arguments Atom.eq /.
 
 (** It is trivial to declare an instance of [EqDec] for [atom]. *)
 
 Instance EqDec_atom : @EqDec atom eq eq_equivalence.
-Proof. exact AtomImpl.eq_dec. Defined.
+Proof. exact Atom.eq_dec. Defined.
 
 
 (* ********************************************************************** *)
@@ -130,8 +134,8 @@ Proof. exact AtomImpl.eq_dec. Defined.
     this library.  In order to avoid polluting Coq's namespace, we do
     not use [Module Export]. *)
 
-Module Import AtomSetImpl : FSetExtra.WSfun AtomImpl :=
-  FSetExtra.Make AtomImpl.
+Module Import AtomSetImpl : FSetExtra.WSfun Atom :=
+  FSetExtra.Make Atom.
 
 Notation atoms :=
   AtomSetImpl.t.
@@ -139,13 +143,13 @@ Notation atoms :=
 (** The [AtomSetDecide] module provides the [fsetdec] tactic for
     solving facts about finite sets of atoms. *)
 
-Module Export AtomSetDecide := Coq.FSets.FSetDecide.WDecide_fun AtomImpl AtomSetImpl.
+Module Export AtomSetDecide := Coq.FSets.FSetDecide.WDecide_fun Atom AtomSetImpl.
 
 (** The [AtomSetNotin] module provides the [destruct_notin] and
     [solve_notin] for reasoning about non-membership in finite sets of
     atoms, as well as a variety of lemmas about non-membership. *)
 
-Module Export AtomSetNotin := FSetWeakNotin.Notin_fun AtomImpl AtomSetImpl.
+Module Export AtomSetNotin := FSetWeakNotin.Notin_fun Atom AtomSetImpl.
 
 (** Given the [fsetdec] tactic, we typically do not need to refer to
     specific lemmas about finite sets.  However, instantiating
@@ -155,8 +159,8 @@ Module Export AtomSetNotin := FSetWeakNotin.Notin_fun AtomImpl AtomSetImpl.
     [Equal] relation on finite sets) in propositions about finite
     sets. *)
 
-Module AtomSetFacts := FSetFacts.WFacts_fun AtomImpl AtomSetImpl.
-Module AtomSetProperties := FSetProperties.WProperties_fun AtomImpl AtomSetImpl.
+Module AtomSetFacts := FSetFacts.WFacts_fun Atom AtomSetImpl.
+Module AtomSetProperties := FSetProperties.WProperties_fun Atom AtomSetImpl.
 
 Export AtomSetFacts.
 

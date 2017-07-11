@@ -78,7 +78,7 @@ Open Scope set_hs_scope.
     parameter inlining, the types in the instantiated functor will all
     use [atom] for the type for keys. *)
 
-Module Export EnvImpl := AssocList.Make AtomImpl AtomSetImpl.
+Module Export EnvImpl := AssocList.Make Atom AtomSetImpl.
 
 (** We provide alternative names for the tactics on association lists
     to reflect our use of association lists for environments. *)
