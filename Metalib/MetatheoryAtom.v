@@ -33,11 +33,10 @@ Module Type ATOM <: UsualDecidableType.
   Parameter atom : Set.
   Definition t := atom.
 
-  Parameter eq_dec : forall x y : t, {x = y} + {x <> y}.
-  Hint Resolve eq_dec.
+  Parameter eq_dec : forall x y : atom, {x = y} + {x <> y}.
 
   Parameter atom_fresh_for_list :
-    forall (xs : list t), {x : t | ~ List.In x xs}.
+    forall (xs : list t), {x : atom | ~ List.In x xs}.
 
   Parameter fresh : list atom -> atom.
 
@@ -105,7 +104,7 @@ Module AtomImpl : ATOM.
 
 End AtomImpl.
 
-(** We make [atom], [eq_atom_dec], and [atom_fresh_for_list] available
+(** We make [atom], [fresh], [fresh_not_in] and [atom_fresh_for_list] available
     without qualification. *)
 
 Notation atom := AtomImpl.atom.

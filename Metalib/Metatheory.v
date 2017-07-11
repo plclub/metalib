@@ -11,11 +11,9 @@ Require Export Coq.FSets.FSets.
 Require Export Coq.Lists.List.
 
 Require Export Metalib.AssocList.
-Require Export Metalib.CoqEqDec.
 Require Export Metalib.CoqListFacts.
 Require Export Metalib.LibTactics.
 Require Export Metalib.MetatheoryAtom.
-
 
 
 (* ********************************************************************** *)
@@ -233,6 +231,19 @@ Hint Resolve
   AtomSetImpl.remove_2 AtomSetImpl.singleton_2 AtomSetImpl.union_2
   AtomSetImpl.union_3 AtomSetImpl.inter_3 AtomSetImpl.diff_3.
 
+(* ********************************************************************** *)
+(** * Decidable equality *)
+
+(* SCW: this export must be at the end of the file so that eq_dec refers to
+   the type class member, not KeySetFacts.eq_dec. *)
+Require Export Metalib.CoqEqDec.
+
+(** We prefer that "==" refer to decidable equality at [eq], as
+    defined by the [EqDec_eq] class from the CoqEqDec library. *)
+
+Notation " x  == y " := (eq_dec x y) (at level 70) : coqeqdec_scope.
+
+Open Scope coqeqdec_scope.
 
 (* ********************************************************************** *)
 (** * Ott compatibility *)
@@ -245,7 +256,7 @@ Notation var := atom (only parsing).
 
 Notation vars := atoms (only parsing).
 
-Notation eq_var := AtomImpl.eq_dec (only parsing).
+Notation eq_var := eq_dec (only parsing).
 
 Notation "x  ===  y" :=
   (x == y)
