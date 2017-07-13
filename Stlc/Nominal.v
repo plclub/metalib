@@ -350,17 +350,18 @@ Definition machine_step (avoid : atoms) (c : configuration) : Step configuration
 Definition initconf (t : n_exp) : configuration := (nil,t,nil).
 
 
-(** Example: evaluation of  "(\y. (\x. x) y) X"
+(** Example: evaluation of  "(\y. (\x. x) y) Z"
 
 <<
      machine                                       corresponding term
 
-      {}, (\y. (\x. x) y) X , nil                  (\y. (\x. x) y) X
-  ==> {}, (\y. (\x. x) y), n_app2 X :: nil         (\y. (\x. x) y) X
-  ==> {y -> X}, (\x.x) y, nil                      (\x. x) X
-  ==> {y -> X}, (\x.x), n_app2 y :: nil            (\x. x) X
-  ==> {y -> X}, y , nil                            X
-  ==> {y -> X}, X , nil                            X
+      {}, (\y. (\x. x) y) Z , nil                  (\y. (\x. x) y) Z
+  ==> {}, (\y. (\x. x) y), n_app2 Z :: nil         (\y. (\x. x) y) Z
+  ==> {y -> Z}, (\x.x) y, nil                      (\x. x) Z
+  ==> {y -> Z}, (\x.x), n_app2 y :: nil            (\x. x) Z
+  ==> {x -> y, y -> Z}, x, nil                     Z
+  ==> {x -> y, y -> Z}, y, nil                     Z
+  ==> {x -> y, y -> Z}, Z, nil                     Z
   ==> Done
 >>
 
