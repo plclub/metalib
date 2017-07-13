@@ -22,7 +22,7 @@ Definition ctx : Set := list ( atom * typ ).
 (** opening up abstractions *)
 Fixpoint open_exp_wrt_exp_rec (k:nat) (e_5:exp) (e__6:exp) {struct e__6}: exp :=
   match e__6 with
-  | (var_b nat) => 
+  | (var_b nat) =>
       match lt_eq_lt_dec nat k with
         | inleft (left _) => var_b nat
         | inleft (right _) => e_5
@@ -75,7 +75,7 @@ Definition is_value (e : exp) : Prop :=
   end.
 
 Module StlcNotations.
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68).
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 0).
 Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
 End StlcNotations.
 
@@ -101,7 +101,7 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
  | step_beta : forall (e1 e2:exp),
      lc_exp (abs e1) ->
      lc_exp e2 ->
-     step (app  ( (abs e1) )  e2)  (open_exp_wrt_exp  e1 e2 ) 
+     step (app  ( (abs e1) )  e2)  (open_exp_wrt_exp  e1 e2 )
  | step_app : forall (e1 e2 e1':exp),
      lc_exp e2 ->
      step e1 e1' ->
@@ -110,5 +110,3 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 
 (** infrastructure *)
 Hint Constructors typing step lc_exp.
-
-

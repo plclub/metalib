@@ -60,9 +60,6 @@ Qed.
       - [nil]: The empty list.
       - [one]: Lists consisting of exactly one item.
       - [++]:  List append.
-
-   Furthermore, we introduce compact notation for one (singleton lists):
-   [(x ~ T)] is the same as [one (x, T)].
 *)
 
 (** The simpl_env tactic actually puts lists built from only nil, one
@@ -72,9 +69,11 @@ Qed.
 *)
 (* /FULL *)
 
+
+
 Lemma simpl_env_demo : forall (x y:atom) (T1 T2:typ) (E F:ctx),
-   ((x ~ T1) ++ nil) ++ (y,T2) :: (nil ++ E) ++ F =
-   (x ~ T1) ++ (y ~ T2) ++ E ++ F.
+   ([(x, T1)] ++ nil) ++ (y,T2) :: (nil ++ E) ++ F =
+   [(x,T1)] ++ [(y, T2)] ++ E ++ F.
 Proof.
    intros.
    (* simpl_env puts the left side into the normal form. *)
@@ -82,24 +81,6 @@ Proof.
    reflexivity.
 Qed.
 
-(** Note that the [simpl] tactic doesn't produce the "normal form" for
-    contexts. It should always be followed up with [simpl_env].
-
-    Furthermore, to convert an context to any equivalent form
-    other than the normal form (perhaps to apply a lemma) use the
-    tactic [rewrite_env].
-*)
-
-Lemma rewrite_env_demo : forall (x y:atom) (T:typ) P,
-  (forall E, P ((x,T):: E) -> True) ->
-  P (x ~ T) ->
-  True.
-Proof.
-  intros x y T P H.
-  (* apply H. fails here. *)
-  rewrite_env ((x,T) :: nil).
-  apply H.
-Qed.
 
 (** Context operations. *)
 
@@ -108,7 +89,7 @@ Qed.
 *)
 
 Lemma binds_demo : forall (x:atom) (T:typ) (E F:ctx),
-  binds x T (E ++ (x ~ T) ++ F).
+  binds x T (E ++ [(x, T)] ++ F).
 Proof.
   auto.
 Qed.
@@ -120,7 +101,7 @@ Qed.
  *)
 
 Lemma dom_demo : forall (x y : atom) (T : typ),
-  dom (x ~ T) [=] singleton x.
+  dom [(x, T)] [=] singleton x.
 Proof.
   auto.
 Qed.
@@ -130,7 +111,7 @@ Qed.
 *)
 
 Lemma uniq_demo : forall (x y : atom) (T : typ),
-  x <> y -> uniq ((x ~ T) ++ (y ~ T)).
+  x <> y -> uniq ([(x,T)] ++ [(y, T)]).
 Proof.
   auto.
 Qed.
@@ -174,7 +155,7 @@ Inductive typing_e : ctx -> exp -> typ -> Prop :=
       typing_e E (var_f x) T
   | typing_e_abs : forall x E e T1 T2,
       x `notin` dom E \u fv_exp e ->
-      typing_e ((x ~ T1) ++ E) (e ^ x) T2 ->
+      typing_e ([(x, T1)] ++ E) (e ^ x) T2 ->
       typing_e E (abs e) (typ_arrow T1 T2)
   | typing_e_app : forall E e1 e2 T1 T2,
       typing_e E e1 (typ_arrow T1 T2) ->
@@ -365,7 +346,7 @@ Proof.
   - Case "typing_abs".
     apply typing_abs with (L := dom (G0 ++ F ++ E) \u L).
     intros x Frx.
-    rewrite_env (((x ~ T1) ++ G0) ++ F ++ E).
+    rewrite_env (([(x, T1)] ++ G0) ++ F ++ E).
     apply H0.
       auto.
       simpl_env. reflexivity.
@@ -407,12 +388,12 @@ Qed.
 
 <<
   typing_subst_simple : forall E e u S T z,
-    typing ((z ~ S) ++ E) e T ->
+    typing ([(z,S)] ++ E) e T ->
     typing E u S ->
     typing E ([z ~> u] e) T
 
   typing_subst : forall E F e u S T z,
-    typing (F ++ (z ~ S) ++ E) e T ->
+    typing (F ++ [(z,S)] ++ E) e T ->
     typing E u S ->
     typing (F ++ E) ([z ~> u] e) T
 >>
@@ -445,8 +426,8 @@ Qed.
   *)
 
 Lemma typing_subst_var_case : forall (E F : ctx) u S T (z x : atom),
-  binds x T (F ++ (z ~ S) ++ E) ->
-  uniq (F ++ (z ~ S) ++ E) ->
+  binds x T (F ++ [(z,S)] ++ E) ->
+  uniq (F ++ [(z,S)] ++ E) ->
   typing E u S ->
   typing (F ++ E) ([z ~> u] (var_f x)) T.
 Proof.
@@ -495,13 +476,13 @@ Qed. (* /ADMITTED *)
 *)
 
 Lemma typing_subst : forall (E F : ctx) e u S T (z : atom),
-  typing (F ++ (z ~ S) ++ E) e T ->
+  typing (F ++ [(z,S)] ++ E) e T ->
   typing E u S ->
   typing (F ++ E) ([z ~> u] e) T.
 Proof.
 (* ADMITTED *)
   intros E F e u S T z He Hu.
-  remember (F ++ (z ~ S) ++ E) as E'.
+  remember (F ++ [(z,S)] ++ E) as E'.
   generalize dependent F.
   induction He.
   - Case "typing_var".
@@ -515,7 +496,7 @@ Proof.
     apply typing_abs with (L := {{z}} \u L).
     intros y Fry.
     rewrite subst_var.
-    rewrite_env (((y ~ T1) ++ F) ++ E).
+    rewrite_env (([(y,T1)] ++ F) ++ E).
     apply H0.
       auto.
       simpl_env. reflexivity.
@@ -538,7 +519,7 @@ Qed. (* /ADMITTED *)
 *)
 
 Lemma typing_subst_simple : forall (E : ctx) e u S T (z : atom),
-  typing ((z ~ S) ++ E) e T ->
+  typing ([(z,S)] ++ E) e T ->
   typing E u S ->
   typing E ([z ~> u] e) T.
 Proof.
@@ -555,7 +536,7 @@ Qed. (* /ADMITTED *)
 (** * Preservation *)
 (*************************************************************************)
 
-(** *** Exercise (Recommended)
+(** *** Recommended Exercise [preservation]
 
     Complete the proof of preservation.  In this proof, we proceed by
     induction on the given typing derivation.  The induction
@@ -620,7 +601,7 @@ Qed. (* /ADMITTED *)
 (** * Progress *)
 (*************************************************************************)
 
-(** *** Exercise
+(** *** Exercise [progress]
 
     Complete the proof of the progress lemma.  The induction
     hypothesis has already been appropriately generalized by the given
@@ -764,7 +745,7 @@ Proof.
   induction H; auto.
   - Case "typing_abs".
     pick fresh x.
-    assert (uniq ((x ~ T1) ++ G)); auto.
+    assert (uniq ([(x, T1)] ++ G)); auto.
     solve_uniq.
 Qed.
 
@@ -778,20 +759,20 @@ Qed.
 Lemma typing_rename : forall (x y : atom) E e T1 T2,
   x `notin` fv_exp e ->
   y `notin` dom E ->
-  typing ((x ~ T1) ++ E) (e ^ x) T2 ->
-  typing ((y ~ T1) ++ E) (e ^ y) T2.
+  typing ([(x, T1)] ++ E) (e ^ x) T2 ->
+  typing ([(y, T1)] ++ E) (e ^ y) T2.
 Proof.
   intros x y E e T1 T2 Fr1 Fr2 H.
   destruct (x == y).
   - Case "x = y".
     subst; eauto.
   - Case "x <> y".
-    assert (J : uniq ((x ~ T1) ++ E)).
+    assert (J : uniq ([(x, T1)] ++ E)).
       eapply typing_uniq; eauto.
     assert (J' : uniq E).
       inversion J; eauto.
     rewrite (@subst_exp_intro x); eauto.
-    rewrite_env (nil ++ (y ~ T1) ++ E).
+    rewrite_env (nil ++ [(y, T1)] ++ E).
     apply typing_subst with (S := T1).
     simpl_env.
     + SCase "(open x s) is well-typed".
@@ -802,7 +783,7 @@ Qed.
 
 
 (*************************************************************************)
-(** ** Exercise: Exists-Fresh Definition *)
+(** ** Exists-Fresh Definition *)
 (*************************************************************************)
 
 (** The use of cofinite quantification may make some people worry that we
@@ -812,7 +793,7 @@ Qed.
 
 Lemma typing_abs_exists : forall E e T1 T2 (x : atom),
       x `notin` dom E \u fv_exp e ->
-      typing ((x ~ T1) ++ E) (e ^ x) T2 ->
+      typing ([(x,T1)] ++ E) (e ^ x) T2 ->
       typing E (abs e) (typ_arrow T1 T2).
 Proof.
   intros.
@@ -821,6 +802,7 @@ Proof.
   apply typing_rename with (x:=x); auto.
 Qed.
 
+(** *** Exercise [exists_cofinite] *)
 
 Lemma exists_cofinite : forall E e T,
     typing_e E e T -> typing E e T.
@@ -830,6 +812,8 @@ Proof.
   induction H; eauto.
   eapply typing_abs_exists with (x:=x); eauto.
 Qed. (* /ADMITTED *)
+
+(** *** Exercise [cofinite_exists] *)
 
 Lemma cofinite_exists : forall G e T,
     typing G e T -> typing_e G e T.
@@ -860,7 +844,7 @@ Proof.
     fsetdec.
   - Case "typing_abs".
     pick fresh x.
-    assert (Fx : fv_exp (e ^ x) [<=] dom ((x ~ T1) ++ G))
+    assert (Fx : fv_exp (e ^ x) [<=] dom ([(x,T1)] ++ G))
       by eauto.
     simpl in Fx.
     assert (Fy : fv_exp e [<=] fv_exp (e ^ x)) by

@@ -149,7 +149,7 @@ Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
 *)
 
 Module StlcNotations.
-Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 68) : exp_scope.
+Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 0) : exp_scope.
 Notation open e1 e2     := (open_exp_wrt_exp e1 e2).
 Notation "e ^ x"        := (open_exp_wrt_exp e (var_f x)) : exp_scope.
 End StlcNotations.
@@ -230,7 +230,7 @@ Inductive typing : ctx -> exp -> typ -> Prop :=
      binds x T G  ->
      typing G (var_f x) T
  | typing_abs : forall (L:vars) (G:ctx) (T1:typ) (e:exp) (T2:typ),
-     (forall x , x \notin L -> typing ((x ~ T1) ++ G) (e ^ x) T2)  ->
+     (forall x , x \notin L -> typing ([(x,T1)] ++ G) (e ^ x) T2)  ->
      typing G (abs e) (typ_arrow T1 T2)
  | typing_app : forall (G:ctx) (e1 e2:exp) (T2 T1:typ),
      typing G e1 (typ_arrow T1 T2) ->

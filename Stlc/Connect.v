@@ -20,7 +20,7 @@ Require Import Stlc.Nominal.
 Import StlcNotations.
 
 (***********************************************************************)
-(** * Translating nominal to LN terms *)
+(** ** Translating nominal to LN terms *)
 (***********************************************************************)
 
 (** We translate named terms to LN terms through the use of the
@@ -48,6 +48,9 @@ Fixpoint apply_heap (h : heap) (e : exp) : exp  :=
   | (x , e') :: h' => apply_heap h' ([x ~> nom_to_exp e'] e)
   end.
 
+(* Note that the stack could have some heap definitions in it,
+   so we apply the substitutions in the heap there too. *)
+
 Fixpoint apply_stack h (s : list frame) (e :exp) : exp :=
   match s with
   | nil => e
@@ -60,9 +63,19 @@ Definition decode (c:configuration) : exp  :=
   end.
 
 
+(* Here's an example from the machine step demo: *)
+
+Definition conf1 := ([(Y,n_var Z)], n_abs X (n_var X), [n_app2 (n_var Y)]).
+
+Example decode1 : decode conf1 = (app (abs (var_b 0)) (var_f Z)).
+Proof.
+  default_simp.
+  unfold close_exp_wrt_exp.
+  default_simp.
+Qed.
 
 (***********************************************************************)
-(** * Demo: connecting free variable functions.                          *)
+(** ** Demo: connecting free variable functions.                          *)
 (***********************************************************************)
 
 (** Here is the first result about our decoding: that the two free
@@ -99,6 +112,15 @@ Hint Resolve fv_nom_fv_exp_eq : lngen.
 Ltac default_auto        ::= auto with lngen.
 Ltac default_autorewrite ::= autorewrite with lngen.
 
+(** We also add a few more rewriting lemmas to the hint database to
+    automate our proofs. *)
+
+Hint Rewrite subst_exp_open_exp_wrt_exp : lngen.
+Hint Rewrite swap_size_eq : lngen.
+Hint Resolve le_S_n : lngen.
+
+(***********************************************************************)
+(** ** Decoded terms are locally closed *)
 (***********************************************************************)
 
 (** Next, we show that our decoding of nominal terms and
@@ -120,7 +142,7 @@ Proof.
 Qed.
 Hint Resolve apply_heap_lc : lngen.
 
-(** Exercise: apply_stack_lc
+(** *** Exercise: [apply_stack_lc]
 
     State and prove a lemma called [apply_stack_lc] and add it to the
     [lngen] hint database so that the proof for [decode_lc] goes
@@ -142,7 +164,7 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (***********************************************************************)
-(** Properties of apply_heap *)
+(** ** Properties of apply_heap *)
 (***********************************************************************)
 
 (** Since the heap is just an iterated substitution, it inherits
@@ -169,7 +191,7 @@ Qed.
 Hint Rewrite apply_heap_app : lngen.
 
 
-(** Exercise: apply_heap_open
+(** *** Exercise: [apply_heap_open]
 
     This function is the [apply_heap] analogue to
     [subst_exp_open_exp_wrt_exp], commuting the heap-based
@@ -181,11 +203,12 @@ Lemma apply_heap_open : forall h e e0,
     apply_heap h (open e e0)  =
        open (apply_heap h e) (apply_heap h e0).
 Proof.
+(* ADMITTED *)
   alist induction h; intros;
     simpl in *;
     try rewrite subst_exp_open_exp_wrt_exp;
     default_simp.
-Qed.
+Qed. (* /ADMITTED *)
 
 Hint Rewrite apply_heap_open : lngen.
 
@@ -198,14 +221,12 @@ Proof.
 Qed.
 
 (***********************************************************************)
-(** * Stacks as evaluation contexts                                    *)
+(** ** Stacks as evaluation contexts                                    *)
 (***********************************************************************)
 
 (** Here is a quick lemma that uses the properties defined above.
-    It shows that the stack does behave like an evaluation context,
+    It shows that the stack behaves like an *evaluation context*,
     lifting a small-step reduction to a larger term.
-
-    Q: Which properties above does this proof implicitly rely on?
  *)
 
 
@@ -218,7 +239,26 @@ Qed.
 
 
 (***********************************************************************)
-(** * Scoped heaps                                                     *)
+(** * Scoped configurations                                            *)
+(***********************************************************************)
+
+(** Not all abstract machine steps simulate small-steps of the
+    substitution-based STLC.  *)
+
+(** For example, if the domain of the heap is not unique (i.e. it has
+    multiple definitions for the same variable) then its evaluation
+    may not produce expected results.
+
+    Similarly, if the [avoid] set that we pass to each machine step
+    does not include initial the free variables of the term, then we could
+    capture them in strange ways. *)
+
+(** Therefore, we will restrict our correctness lemmas so that they only
+    apply to _well-scoped_ configurations; as defined below. *)
+
+
+(***********************************************************************)
+(** ** Scoped heaps                                                    *)
 (***********************************************************************)
 
 (** Next, we define when a heap is *well-scoped*.  Well-scoped heaps
@@ -239,7 +279,7 @@ Inductive scoped_heap (D : atoms) : heap -> Prop :=
       scoped_heap D ((x,e)::h).
 
 
-(** Exercise [apply_heap_get]  (recommended)
+(** *** Recommended Exercise [apply_heap_get]
 
     We can use get to look up expressions in the heap. However, to know that
     we have the right result we need to know that the heap is well-scoped, i.e.
@@ -278,7 +318,7 @@ Proof.
 Qed. (* /ADMITTED *)
 
 (***********************************************************************)
-(** * Scoped stacks                                                    *)
+(** ** Scoped stacks                                                    *)
 (***********************************************************************)
 
 (** We also care about the free variables that can appear in stacks. (We
@@ -331,6 +371,8 @@ Lemma swap_spec : forall  n w y,
 
  *)
 
+(** *** Exercise [close_exp_wrt_exp_freshen] *)
+
 (** This proof depends on the following auxiliary lemma about the
     close operation --- that we can equivalently rename the atom that
     we are closing with. *)
@@ -342,16 +384,13 @@ Lemma close_exp_wrt_exp_freshen : forall x y e,
     close_exp_wrt_exp x e =
     close_exp_wrt_exp y ([x ~> var_f y] e).
 Proof.
+(* ADMITTED *)
   intros x y e.
   unfold close_exp_wrt_exp.
   generalize 0 as k.
   generalize e. clear e.
   induction e; default_simp.
-Qed.
-
-
-Hint Rewrite swap_size_eq : lngen.
-Hint Resolve le_S_n : lngen.
+Qed. (* /ADMITTED *)
 
 (** One difficulty of [swap_spec] is that we cannot do induction on
     the structure of nominal terms. Instead, we must use a size
@@ -425,7 +464,7 @@ Qed.
 (** * Connection for alpha-equivalence                                 *)
 (***********************************************************************)
 
-(** Challenge Exercise: aeq iff =
+(** ** Challenge Exercise: [aeq_nom_to_exp]
 
     Show that alpha-equivalence for the nominal representation is definitional
     equality for LN terms.
@@ -442,8 +481,6 @@ Proof.
     rewrite swap_spec; auto.
     congruence.
 Qed. (* /ADMITTED *)
-
-Hint Rewrite subst_exp_open_exp_wrt_exp : lngen.
 
 Lemma nom_to_exp_eq_aeq : forall n1 n2, nom_to_exp n1 = nom_to_exp n2 -> aeq n1 n2.
 Proof.
@@ -564,7 +601,7 @@ Proof.
       auto.
 (* ADMITTED *) Qed. (* /ADMITTED *)
 
-(** Exercise [simulate_done]
+(** *** Exercise [simulate_done]
 
     Show that if the machine says [Done] then the LN term is a value.
 *)
@@ -590,7 +627,7 @@ Qed. (* /ADMITTED *)
 
 
 
-(** Challenge exercise [simulate_error]
+(** *** Challenge exercise [simulate_error]
 
     Show that if the machine produces an error, the small step relation
     is stuck.
@@ -656,7 +693,7 @@ Qed. (* /ADMITTED *)
 
 (***********************************************************************)
 
-(** Challenge exercise [machine_is_scoped]
+(** *** Challenge exercise [machine_is_scoped]
 
     Show that the abstract machine is scoped, then any resulting
     configurations are also scoped. *)

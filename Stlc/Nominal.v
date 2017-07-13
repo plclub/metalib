@@ -25,6 +25,11 @@ Require Export Metalib.Metatheory.
 Require Export Metalib.LibLNgen.
 
 
+(** Some fresh variables *)
+Notation X := (fresh nil).
+Notation Y := (fresh (X :: nil)).
+Notation Z := (fresh (X :: Y :: nil)).
+
 (*************************************************************)
 (** * A nominal representation of terms                      *)
 (*************************************************************)
@@ -33,6 +38,14 @@ Inductive n_exp : Set :=
  | n_var (x:atom)
  | n_abs (x:atom) (t:n_exp)
  | n_app (t1:n_exp) (t2:n_exp).
+
+(** For example, we can encode the expression [(\X.Y X)] as below.  *)
+
+Definition demo_rep1 := n_abs X (n_app (n_var Y) (n_var X)).
+
+(** For example, we can encode the expression [(\Z.Y Z)] as below.  *)
+
+Definition demo_rep2 := n_abs Z (n_app (n_var Y) (n_var Z)).
 
 
 (** As usual, the free variable function needs to remove the
@@ -44,6 +57,17 @@ Fixpoint fv_nom (n : n_exp) : atoms :=
   | n_app t1 t2 => fv_nom t1 `union` fv_nom t2
   end.
 
+(** The tactics for reasoning about lists and sets of atoms are useful here
+    too. *)
+
+Example fv_nom_rep1 : fv_nom demo_rep1 [=] {{ Y }}.
+Proof.
+  simpl.
+  assert (~ In Y (X :: nil)).     (* assert that Y is not the same variable as X *)
+  apply Atom.fresh_not_in.
+  apply elim_not_In_cons in H.
+  fsetdec.
+Qed.
 
 (** What makes this a *nominal* representation is that our
     operations are based on the following swapping function for
@@ -86,7 +110,10 @@ Fixpoint swap (x:atom) (y:atom) (t:n_exp) : n_exp :=
     atoms.
 
     For more information about the [default_simp] tactic, see
-    [metalib/LibDefaultSimp.v]. *)
+    [metalib/LibDefaultSimp.v].
+
+    WARNING: this tactic is not always safe. It's a power tool
+    and can put your proof in an irrecoverable state. *)
 
 Example swap1 : forall x y z, x <> z -> y <> z ->
     swap x y (n_abs z (n_app (n_var x)(n_var y))) = n_abs z (n_app (n_var y) (n_var x)).
@@ -178,7 +205,7 @@ Qed. (* /WORKINCLASS *)
 (*************************************************************)
 
 
-(** *** Recommended Exercise: swap properties
+(** *** Recommended Exercise: [swap] properties
 
     Prove the following properties about swapping, either
     explicitly (by destructing [x == y]) or automatically
@@ -222,7 +249,7 @@ Proof.
   - rewrite IHt1. rewrite IHt2. auto.
 Qed. (* /ADMITTED *)
 
-Lemma notin_fv_nom_equivariance : forall x0 x y t,
+Lemma notin_fv_nom_equivariance : forall x0 x y t ,
   x0 `notin` fv_nom t ->
   swap_var x y x0  `notin` fv_nom (swap x y t).
 Proof.
@@ -230,11 +257,10 @@ Proof.
   induction t; intros; simpl in *.
   - unfold swap_var; default_simp.
   - unfold swap_var in *. default_simp.
-  - destruct_notin.
-    eapply IHt1 in H.
-    eapply IHt2 in NotInTac.
-    fsetdec.
+  - destruct_notin. eauto.
 Qed. (* /ADMITTED *)
+
+(* HINT: For a helpful fact about sets of atoms, check AtomSetImpl.union_1 *)
 
 Lemma in_fv_nom_equivariance : forall x y x0 t,
   x0 `in` fv_nom t ->
@@ -373,7 +399,7 @@ semantics in the next section.
 
 *)
 
-(** *** Exercise (recommended)
+(** *** Recommended Exercise [values_are_done]
 
     Show that values don't step using this abstract machine.
     (This is a simple proof.)
@@ -390,7 +416,7 @@ Qed. (* /ADMITTED *)
 
 
 (*************************************************************)
-(** * Size based termination                                 *)
+(** * Size based reasoning                                   *)
 (*************************************************************)
 
 

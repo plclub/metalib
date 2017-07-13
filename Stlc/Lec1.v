@@ -262,7 +262,7 @@ Check (Y == Z).
 *)
 (* /FULL *)
 
-Lemma demo_subst1:
+Example demo_subst1:
   [Y ~> var_f Z] (abs (app (var_b 0) (var_f Y))) = (abs (app (var_b 0) (var_f Z))).
 Proof.
 (* WORKINCLASS *)
