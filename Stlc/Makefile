@@ -68,7 +68,7 @@ Stlc.v: stlc.ott Makefile
 	make METALIB.FIX_Stlc
 
 Stlc_inf.v: stlc.ott Makefile
-	lngen --coq-no-proofs --coq Stlc_inf.v --coq-ott Stlc stlc.ott
+	lngen --coq Stlc_inf.v --coq-ott Stlc stlc.ott
 	make METALIB.FIX_Stlc_inf
 
 %.vo : %.v

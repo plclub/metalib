@@ -18,19 +18,19 @@
     For example, we would like to show that these two terms are
     indistinguishable to the semantics
 
-              \x.x  and  \y.y
+              [\x.x]  and  [\y.y]
 
   - Second, substitution should be _capture avoiding_. When we substitute
     terms with free variables, those free variables should never become bound
     by the terms they are being substituted into. This means that sometimes we
     need to rename bound variables to avoid capture. For example,
 
-            [ z ~> \x.y ](\y.z)     should be     \y1.\x.y
+          [  [ z ~> \x.y ](\y.z) ]    should be   [  \y1.\x.y ]
 *)
 
-(** ** Approaches to variable binding *)
+(** ** Approaches to variable binding
 
-(** Unfortunately, variable binding is an _old_ problem. The issue isn't that
+    Unfortunately, variable binding is an _old_ problem. The issue isn't that
     we don't know how to solve this problem, in fact there are _many_, _many_
     different ways to solve this problem and they all have their trade offs.
     I won't include an entire taxonomy of solutions here, but before we go
@@ -61,12 +61,12 @@
     all alpha-equivalent terms _definitionally_ equivalent. LN does this while
     still providing an interface that is mostly similar to paper proofs.
 
-Other approaches to variable binding include: de Bruijn indices, de Bruijn
+Other approaches to variable binding include de Bruijn indices, de Bruijn
 levels, weak HOAS, PHOAS, locally named, canonically named... etc. Of these,
 de Bruijn representations are by far the most commonly used representation in
-Coq.
+Coq. *)
 
-(** ** Overview *)
+(** ** Overview
 
 In this tutorial, we will promote the following approach to variable binding.
 
@@ -96,9 +96,9 @@ heap (i.e. runtime environment for variables) so we will not need to define
 capture-avoiding substitution as part of our semantics.
 
 Finally, we will prove that the abstract machine implements the same semantics
-as the locally nameless based substitution semantics.
+as the locally nameless based substitution semantics. *)
 
-(** ** Tool support *)
+(** ** Tool support
 
 The development of this tutorial draws from two coordinating tools that
 support working with LN representations.
@@ -159,20 +159,20 @@ Definition Z : atom := fresh (X :: Y :: nil).
   occurrence. *)
 
 Definition demo_rep1 := abs (app (var_f Y) (var_b 0)).
-(**                      ^                        |                   *)
-(**                      |                        |                   *)
-(**                      --------------------------                   *)
+(*                       ^                        |                   *)
+(*                       |                        |                   *)
+(*                       --------------------------                   *)
 
 
 
 (**  Here is another example: the encoding of [(\x. \y. (y x))].      *)
 
 Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
-(**                      ^    ^              |         |              *)
-(**                      |    |              |         |              *)
-(**                      |    ----------------         |              *)
-(**                      |                             |              *)
-(**                      -------------------------------              *)
+(*                       ^    ^              |         |              *)
+(*                       |    |              |         |              *)
+(*                       |    ----------------         |              *)
+(*                       |                             |              *)
+(*                       -------------------------------              *)
 
 (** Finally, here is an example where the same bound variable has two
     different indices, and the same index refers to two different
@@ -181,11 +181,11 @@ Definition demo_rep2 := abs (abs (app (var_b 0) (var_b 1))).
 
 Definition demo_rep3 :=
            abs (app (abs (app (var_b 0) (var_b 1))) (var_b 0)).
-(**         ^         ^              |         |           |          *)
-(**         |         |              |         |           |          *)
-(**         |         ----------------         |           |          *)
-(**         |                                  |           |          *)
-(**         ------------------------------------------------          *)
+(*          ^         ^              |         |           |          *)
+(*          |         |              |         |           |          *)
+(*          |         ----------------         |           |          *)
+(*          |                                  |           |          *)
+(*          ------------------------------------------------          *)
 
 
 (** *** Exercise: term representation
@@ -259,10 +259,6 @@ Check (Y == Z).
       form.
     - The tactic [destruct (Y==Y)] considers the two possible
       results of the equality test.
-    - The tactic [Case] marks cases in the proof script.
-      It takes any string as its argument, and puts that string in
-      the hypothesis list until the case is finished.
-      (This tactic is completely optional.)
 *)
 (* /FULL *)
 
@@ -272,10 +268,8 @@ Proof.
 (* WORKINCLASS *)
   simpl.
   destruct (Y==Y).
-  - Case "left".
-    auto.
-  - Case "right".
-    destruct n. auto.
+  - auto.
+  - destruct n. auto.
 Qed. (* /WORKINCLASS *)
 
 
@@ -494,23 +488,25 @@ Qed. (* /ADMITTED *)
 (*************************************************************************)
 (*************************************************************************)
 
+(** Because we are working with a locally nameless representation, we have
+    a few more operations to consider when working with these terms. *)
 
 (*************************************************************************)
 (** ** Opening *)
 (*************************************************************************)
 
-(** Opening replaces an index with a term, and is defined in the Definitions
+(** Opening replaces an index with a term and is defined in the Definitions
     module.
 *)
 
 
 (** This next demo shows the operation of [open].  For example, the
-    locally nameless representation of the term (\y. (\x. (y x)) y) is
-    [abs (app (abs (app 1 0)) 0)].  To look at the body without the
+    locally nameless representation of the term [(\y. (\x. (y x)) y)] is
+    [abs (app (abs (app 1 0)) 0)].  To look at the body _without_ the
     outer abstraction, we need to replace the indices that refer to
     that abstraction with a name.  Therefore, we show that we can open
-    the body of the abs above with Y to produce [app (abs (app Y 0))
-    Y)].
+    the body of the abs above with [Y] to produce
+    [app (abs (app Y 0)) Y)].
 *)
 
 Lemma demo_open :
@@ -526,10 +522,11 @@ Qed.
 (** ** Local closure *)
 (*************************************************************************)
 
-(** The local closure judgement classifies terms that have *no* dangling
+(** The local closure judgement classifies terms that have _no_ dangling
    indices.
 
-   Step through this derivation to see why the term is locally closed.
+   Step through this derivation to see why the term [((\x. Y x) Y)]
+   is locally closed.
 *)
 
 Lemma demo_lc :
@@ -555,6 +552,11 @@ Qed.
     We won't prove this lemma as part of the tutorial (it is proved in
     [Lemmas.v]), but it is an important building block for reasoning about
     LN terms.
+
+    NOTE: the name of this lemma was automatically generated by LNgen. If
+    we have multiple syntactic classes and multiple sorts of variables,
+    we need to distinguish the different forms of substitution from
+    eachother.
 
  *)
 
@@ -604,7 +606,6 @@ Lemma subst_exp_intro : forall (x : var) u e,
 Proof.
   intros x u e FV_EXP.
   unfold open.
-  unfold open_exp_wrt_exp.
   generalize 0.
   induction e; intro n0; simpl.
   (* ADMITTED *)
@@ -624,6 +625,36 @@ Proof.
     apply IHe2. auto.
 Qed. (* /ADMITTED *)
 
+
+(** *** Exercise [fv_exp_open_exp_wrt_exp_upper] *)
+
+(** Now prove the following lemmas about the free variables of an opened
+    term.
+
+    The structure of this proof follows that of the proof above. You should
+    prove this by induction on the term [e1], after appropriately
+    generalizing the induction hypothesis. Remember to use [fsetdec] for
+    reasoning about properties of atom sets. Also note that you can
+    [rewrite] with atom set inequalities in the hypotheses list. *)
+
+Lemma fv_exp_open_exp_wrt_exp_upper :
+forall e1 e2,
+  fv_exp (open_exp_wrt_exp e1 e2) [<=] fv_exp e2 `union` fv_exp e1.
+Proof.
+  (* ADMITTED *)
+  intros e1 e2.
+  unfold open.
+  generalize 0.
+  induction e1; intro n0; simpl.
+  - destruct (lt_eq_lt_dec n n0).
+    destruct s. simpl. fsetdec.
+    fsetdec.
+    simpl. fsetdec.
+  - fsetdec.
+  - rewrite IHe1. fsetdec.
+  - rewrite IHe1_1. rewrite IHe1_2.
+    fsetdec.
+Qed. (* /ADMITTED *)
 
 (*************************************************************************)
 (** ** Forall quantification in [lc_exp].                                *)
@@ -697,7 +728,7 @@ Abort.
 >>
 
     An easier to use lemma requires us to only show that the body
-    of the abstraction is locally closed for a *single* variable.
+    of the abstraction is locally closed for a _single_ variable.
 
     As before, we won't prove this lemma as part of the tutorial,
     (it too is proved in Lemmas.v) but we will use it as part of
