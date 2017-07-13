@@ -6,5 +6,5 @@ COMPILATION, INSTALLATION, AND DOCUMENTATION:
   To compile the library:
 
       `make`          generate Coq makefile, compile Coq files
-	  `make html`     generate Coq documentation
-	  `make install`  install library on your system
+      `make doc`      generate Coq documentation
+      `make install`  install library on your system
