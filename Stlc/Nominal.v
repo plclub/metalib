@@ -168,7 +168,7 @@ Proof.
 Qed.
 
 (*************************************************************)
-(** * Properties about swapping                              *)
+(** ** Properties about swapping                             *)
 (*************************************************************)
 
 
@@ -201,7 +201,7 @@ Proof.
 Qed. (* /WORKINCLASS *)
 
 (*************************************************************)
-(** * Exercises                                              *)
+(** ** Exercises                                             *)
 (*************************************************************)
 
 
@@ -399,7 +399,7 @@ semantics in the next section.
 
 *)
 
-(** *** Recommended Exercise [values_are_done]
+(** ** Recommended Exercise [values_are_done]
 
     Show that values don't step using this abstract machine.
     (This is a simple proof.)
@@ -524,7 +524,7 @@ Proof.
     auto.
 Qed.
 
-(** *** Challenge Exercise [subst]
+(** ** Challenge Exercise [subst]
 
     Use the definitions above to prove the following results about the
     nominal substitution function.  *)
