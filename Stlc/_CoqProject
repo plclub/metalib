@@ -1,4 +1,5 @@
 -R . Stlc
+-R ../Metalib Metalib
 Definitions.v
 Lemmas.v
 Lec1.v
