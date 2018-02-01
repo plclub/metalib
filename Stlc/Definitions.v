@@ -132,14 +132,6 @@ Fixpoint open_exp_wrt_exp_rec (k:nat) (u:exp) (e:exp) {struct e}: exp :=
                       (open_exp_wrt_exp_rec k u e2)
 end.
 
-Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
-
-
-(*************************************************************************)
-(** * Notations *)
-(*************************************************************************)
-
-
 (** Many common applications of opening replace index zero with an
     expression or variable.  The following definition provides a
     convenient shorthand for such uses.  Note that the order of
@@ -147,6 +139,13 @@ Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
     example, [(open e x)] can be read as "substitute the variable [x]
     for index [0] in [e]" and "open [e] with the variable [x]."
 *)
+
+Definition open_exp_wrt_exp e u := open_exp_wrt_exp_rec 0 u e.
+
+
+(*************************************************************************)
+(** * Notations *)
+(*************************************************************************)
 
 Module StlcNotations.
 Notation "[ z ~> u ] e" := (subst_exp u z e) (at level 0) : exp_scope.
