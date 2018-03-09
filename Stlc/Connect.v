@@ -27,7 +27,7 @@
  *)
 
 Require Import Metalib.Metatheory.
-
+Import Metatheory.AtomMetatheory.
 Require Import Stlc.Definitions.
 Require Import Stlc.Lemmas.
 

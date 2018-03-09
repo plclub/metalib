@@ -15,7 +15,11 @@ Require Export Metalib.CoqListFacts.
 Require Export Metalib.LibTactics.
 Require Export Metalib.MetatheoryAtom.
 
+Module Metatheory(Atom : ATOM).
 
+Module AtomLib := ATOMLib(Atom).
+Export AtomLib.  
+       
 (* ********************************************************************** *)
 (** * Notations for finite sets of atoms *)
 
@@ -236,7 +240,7 @@ Hint Resolve
 
 (* SCW: this export must be at the end of the file so that eq_dec refers to
    the type class member, not KeySetFacts.eq_dec. *)
-Require Export Metalib.CoqEqDec.
+Export Metalib.CoqEqDec.
 
 (** We prefer that "==" refer to decidable equality at [eq], as
     defined by the [EqDec_eq] class from the CoqEqDec library. *)
@@ -295,3 +299,6 @@ Ltac apply_fresh_base H gather_vars atom_name :=
 Set Implicit Arguments.
 Definition union_map (A:Set) (f:A -> vars) (l:list A) :=
  (List.fold_right (fun t acc => f t \u acc) {}) l.
+End Metatheory.
+
+Module AtomMetatheory := Metatheory(Atom).

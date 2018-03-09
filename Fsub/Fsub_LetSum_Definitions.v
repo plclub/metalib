@@ -17,7 +17,7 @@
 *)
 
 Require Export Metalib.Metatheory.
-
+Export Metatheory.AtomMetatheory.
 
 (* ********************************************************************** *)
 (** * #<a name="syntax"></a># Syntax (pre-terms) *)

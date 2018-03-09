@@ -292,9 +292,9 @@ let spec =
 
 let readchan chan =
   let nbytes = in_channel_length chan in
-  let string = String.create nbytes in
+  let string = Bytes.create nbytes in
   really_input chan string 0 nbytes;
-  string
+  Bytes.to_string string
 
 let findsubstring s1 s2 =
   let l1 = String.length s1 in

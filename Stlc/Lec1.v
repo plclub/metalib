@@ -129,6 +129,7 @@ version of that output. (For comparison, the raw output is in [Stlc_inf.v].)
     This command will only succeed if you have already run [make] and [make
     install] in the Metatheory directory to compile the Metatheory library. *)
 Require Import Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 
 (** Next, we import the definitions of the simply-typed lambda calculus.
     If you haven't skimmed this file yet, you should do so now. You don't

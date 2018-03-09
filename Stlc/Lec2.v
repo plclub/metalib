@@ -5,6 +5,7 @@
 (*************************************************************************)
 
 Require Import Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 Require Import Stlc.Definitions.
 Import StlcNotations.
 

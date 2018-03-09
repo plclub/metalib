@@ -108,6 +108,9 @@ Module Atom : ATOM.
 
 End Atom.
 
+Module ATOMLib(Atom : ATOM).
+
+
 (** We make [atom], [fresh], [fresh_not_in] and [atom_fresh_for_list] available
     without qualification. *)
 
@@ -284,3 +287,4 @@ Proof.
   trivial.
 Qed.
 (* end show *)
+End ATOMLib.
