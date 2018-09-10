@@ -77,9 +77,9 @@ Module Make
 
 (* SCW: Make an instance of EqDef_eq for X so that we can use the "==" in [get] below. *)
 Instance EqDec_of_X : @EqDec X.t eq eq_equivalence.
-Proof. exact X.eq_dec. Qed.
+Proof. exact X.eq_dec. Defined.
 Instance EqDec_eq_of_X: @EqDec_eq X.t.
-Proof. exact (EqDec_eq_of_EqDec X.t EqDec_of_X). Qed.
+Proof. exact (EqDec_eq_of_EqDec X.t EqDec_of_X). Defined.
 Open Scope coqeqdec_scope.
 
 Import KeySet.
