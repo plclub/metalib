@@ -1,10 +1,11 @@
 *.v.d
+.coqdeps.d
 *.vo
 *.glob
 .*.aux
 *.v.d
 *.bak
-CoqSrc.mk
+CoqSrc.mk*
 _CoqProject
 *_full.v
 *_sol.v
