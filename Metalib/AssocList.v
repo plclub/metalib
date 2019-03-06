@@ -19,6 +19,7 @@
 Require Import Coq.FSets.FSets.
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
+Require Import Coq.Strings.String.
 
 Require Import Metalib.CoqFSetDecide.
 Require Import Metalib.CoqListFacts.
