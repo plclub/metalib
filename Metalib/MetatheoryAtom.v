@@ -44,6 +44,8 @@ Module Type ATOM <: UsualDecidableType.
 
   Parameter nat_of : atom -> nat.
 
+  Parameter from_nat : nat -> atom.
+
   Hint Resolve eq_dec.
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
@@ -102,6 +104,8 @@ Module Atom : ATOM.
 
   Definition nat_of := fun (x : atom) => x.
 
+  Definition from_nat : nat -> atom := fun x => x.
+  
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
   (* end hide *)
