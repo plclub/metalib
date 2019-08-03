@@ -2,6 +2,7 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Program.Equality.
 
 Require Export Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 Require Export Metalib.LibLNgen.
 
 Require Export Stlc.Definitions.

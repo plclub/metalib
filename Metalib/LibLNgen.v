@@ -10,6 +10,7 @@
 Require Export Metalib.LibDefaultSimp.
 Require Import Metalib.Metatheory.
 Require Import Omega.
+Import Metatheory.AtomMetatheory.
 
 
 (* ********************************************************************** *)

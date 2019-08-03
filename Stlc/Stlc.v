@@ -1,4 +1,5 @@
 Require Import Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 (** syntax *)
 Definition index := nat.
 

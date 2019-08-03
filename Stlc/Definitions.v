@@ -13,6 +13,7 @@
 
 
 Require Import Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 
 (*************************************************************************)
 (** * Syntax of STLC *)

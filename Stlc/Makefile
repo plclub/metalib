@@ -1,6 +1,6 @@
 RULESFILE = stlc-rules.tex
 
-GENCOQ = Stlc.v Stlc_inf.v Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v
+GENCOQ = Lec1_sol.v Lec1_full.v  Lec2_sol.v Lec2_full.v Nominal_full.v Nominal_sol.v Connect_full.v Connect_sol.v
 
 FULL    = Lec1 Lec2 Nominal Connect
 EXTRA   = Stlc.v Stlc_inf.v stlc.ott stlc.mng ottalt.sty listproc.sty stlc.pdf gen.mk
@@ -34,6 +34,7 @@ zipclean:
 
 clean: Stlc.mk paperclean zipclean
 	make -f Stlc.mk clean
+	rm -f $(GENCOQ)
 	rm -f Stlc.mk
 	rm -f *.cmi *.cmo coqsplit
 

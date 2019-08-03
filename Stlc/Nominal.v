@@ -18,6 +18,7 @@ Require Export Omega.
 (** We will use the [atom] type from the metatheory library to
     represent variable names. *)
 Require Export Metalib.Metatheory.
+Import Metatheory.AtomMetatheory.
 
 (** Although we are not using LNgen, some of the tactics from
     its library are useful for automating reasoning about
