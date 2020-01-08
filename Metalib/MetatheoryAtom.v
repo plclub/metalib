@@ -44,10 +44,9 @@ Module Type ATOM <: UsualDecidableType.
 
   Parameter nat_of : atom -> nat.
 
-  Hint Resolve eq_dec.
+  Hint Resolve eq_dec : core.
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
-
 
 End ATOM.
 

@@ -292,7 +292,7 @@ let spec =
 
 let readchan chan =
   let nbytes = in_channel_length chan in
-  let string = String.create nbytes in
+  let string = Bytes.create nbytes in
   really_input chan string 0 nbytes;
   string
 
@@ -416,7 +416,7 @@ let sanity_check s =
      ()
 
 let main () =
-  let s = readchan stdin in
+  let s = Bytes.to_string (readchan stdin) in
   let s1 = apply_spec silent_spec s in
   let s2 =
     if exerciselist then

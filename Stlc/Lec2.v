@@ -4,6 +4,7 @@
 (**                                                                      *)
 (*************************************************************************)
 
+Require Import String.
 Require Import Metalib.Metatheory.
 Require Import Stlc.Definitions.
 Import StlcNotations.
@@ -161,7 +162,7 @@ Inductive typing_e : ctx -> exp -> typ -> Prop :=
       typing_e E e1 (typ_arrow T1 T2) ->
       typing_e E e2 T1 ->
       typing_e E (app e1 e2) T2.
-Hint Constructors typing_e.
+Hint Constructors typing_e : core.
 
 
 (*************************************************************************)
@@ -203,9 +204,8 @@ Abort.
     gets stuck, as can be seen by examining each of the cases in
     the proof below.
 
-    Note: To view subgoal n in a proof, use the command "[Show n]".
-    To work on subgoal n instead of the first one, use the command
-    "[Focus n]".
+    Note: To work on subgoal n instead of the first one, use the command
+    "n : {".
 *)
 
 Lemma typing_weakening_strengthened_0 : forall (E F G : ctx) e T,
@@ -217,7 +217,7 @@ Proof.
   induction H.
   Case "typing_var".
     (* The G0 looks strange in the [typing_var] case. *)
-  Focus 2.
+  2 : {
   Case "typing_abs".
     (* The [typing_abs] case still does not have a strong enough IH. *)
 Abort.

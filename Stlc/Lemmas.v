@@ -123,7 +123,7 @@ Hint Constructors lc_exp : core lngen.
 
 Definition body_exp_wrt_exp e1 := forall x1, lc_exp (open_exp_wrt_exp e1 (var_f x1)).
 
-Hint Unfold body_exp_wrt_exp.
+Hint Unfold body_exp_wrt_exp : core.
 
 
 (* *********************************************************************** *)
@@ -749,7 +749,7 @@ Qed.
 Hint Extern 1 (lc_exp (abs _)) =>
   let x1 := fresh in
   pick_fresh x1;
-  apply (lc_abs_exists x1).
+  apply (lc_abs_exists x1) : core.
 
 Lemma lc_body_exp_wrt_exp :
 forall e1 e2,

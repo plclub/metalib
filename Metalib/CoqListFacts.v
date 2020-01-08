@@ -169,8 +169,8 @@ Section SortedListEquality.
   Hypothesis ltA_eqA : forall x y z, ltA x y -> y = z -> ltA x z.
   Hypothesis eqA_ltA : forall x y z, x = y -> ltA y z -> ltA x z.
 
-  Hint Resolve ltA_trans.
-  Hint Immediate ltA_eqA eqA_ltA.
+  Hint Resolve ltA_trans : core.
+  Hint Immediate ltA_eqA eqA_ltA : core.
 
   Notation Inf := (lelistA ltA).
   Notation Sort := (sort ltA).

@@ -26,8 +26,8 @@
 
  *)
 
+Require Import String.
 Require Import Metalib.Metatheory.
-
 Require Import Stlc.Definitions.
 Require Import Stlc.Lemmas.
 

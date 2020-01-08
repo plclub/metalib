@@ -140,6 +140,9 @@ Require Import Stlc.Definitions.
     brought into scope. *)
 Import StlcNotations.
 
+(** Make the Case tactic available. *)
+Require Import String.
+
 (** For the examples below, we introduce some sample variable names to
     play with. *)
 

@@ -157,7 +157,7 @@ Inductive aeq : n_exp -> n_exp -> Prop :=
      aeq t1 t1' -> aeq t2 t2' ->
      aeq (n_app t1 t2) (n_app t1' t2').
 
-Hint Constructors aeq.
+Hint Constructors aeq : core.
 
 
 Example aeq1 : forall x y, x <> y -> aeq (n_abs x (n_var x)) (n_abs y (n_var y)).
@@ -441,7 +441,7 @@ Proof.
   induction t; simpl; auto.
 Qed.
 
-Hint Rewrite swap_size_eq.
+Hint Rewrite swap_size_eq : core.
 
 (* HIDE *)
 (** ** Nominal induction *)
@@ -600,7 +600,7 @@ Proof.
   intros.
   eapply nominal_induction with (t := t).
 
-  Focus 2.
+  2 : {
   intros.
   rewrite subst_abs. default_simp.
   rewrite subst_abs. default_simp.

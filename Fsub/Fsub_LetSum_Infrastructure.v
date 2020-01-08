@@ -706,14 +706,14 @@ Qed.
     substitution.  This is part of our strategy for automatically
     discharging local-closure proof obligations. *)
 
-Hint Resolve subst_tt_type subst_te_expr subst_ee_expr.
+Hint Resolve subst_tt_type subst_te_expr subst_ee_expr : core.
 
 (** We also add as hints the lemmas concerning [body_e]. *)
 
-Hint Resolve expr_let_from_body body_from_expr_let.
-Hint Resolve expr_case_from_body.
-Hint Resolve body_inl_from_expr_case body_inr_from_expr_case.
-Hint Resolve open_ee_body_e.
+Hint Resolve expr_let_from_body body_from_expr_let : core.
+Hint Resolve expr_case_from_body : core.
+Hint Resolve body_inl_from_expr_case body_inr_from_expr_case : core.
+Hint Resolve open_ee_body_e : core.
 
 (** When reasoning about the [binds] relation and [map], we
     occasionally encounter situations where the binding is
@@ -721,4 +721,4 @@ Hint Resolve open_ee_body_e.
     thus enabling [Hint]s from the MetatheoryEnv library. *)
 
 Hint Extern 1 (binds _ (?F (subst_tt ?X ?U ?T)) _) =>
-  unsimpl (subst_tb X U (F T)).
+  unsimpl (subst_tb X U (F T)) : core.

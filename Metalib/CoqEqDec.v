@@ -15,9 +15,9 @@ Require Import Coq.Logic.Decidable.
 (* *********************************************************************** *)
 (** * Hints for [equiv] *)
 
-Hint Extern 0 (?x === ?x) => reflexivity.
-Hint Extern 1 (_ === _) => (symmetry; trivial; fail).
-Hint Extern 1 (_ =/= _) => (symmetry; trivial; fail).
+Hint Extern 0 (?x === ?x) => reflexivity : core. 
+Hint Extern 1 (_ === _) => (symmetry; trivial; fail) : core.
+Hint Extern 1 (_ =/= _) => (symmetry; trivial; fail) : core.
 
 
 (* *********************************************************************** *)
@@ -91,6 +91,8 @@ Qed.
 
 (** We prefer that "==" refer to decidable equality at [eq], as
     defined by the [EqDec_eq] class from the CoqEqDec library. *)
+
+Declare Scope coqeqdec_scope.
 
 Notation " x  == y " := (eq_dec x y) (at level 70) : coqeqdec_scope.
 

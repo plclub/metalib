@@ -209,7 +209,11 @@ Parameter Z : atom.
     - The tactic [Case] marks cases in the proof script.
       It takes any string as its argument, and puts that string in
       the hypothesis list until the case is finished.
+    - The String library is needed to interpret the labels of the Case 
+      tactic.
 *)
+
+Require Import String. 
 
 Lemma demo_subst1:
   [Y ~> Z] (abs typ_base (app 0 Y)) = (abs typ_base (app 0 Z)).
@@ -454,7 +458,7 @@ Inductive lc : exp -> Prop :=
       lc e1 -> lc e2 ->
       lc (app e1 e2).
 
-Hint Constructors lc.
+Hint Constructors lc : core.
 
 
 (*************************************************************************)
@@ -755,7 +759,7 @@ Inductive lc_c : exp -> Prop :=
       lc_c e2 ->
       lc_c (app e1 e2).
 
-Hint Constructors lc_c.
+Hint Constructors lc_c : core.
 
 (* Reintroduce notation for [open_rec] so that we can reprove
    properties about it and the new version of lc_c. *)
@@ -1080,7 +1084,7 @@ Inductive typing_c : env -> exp -> typ -> Prop :=
     by the [auto] and [eauto] tactics.
 *)
 
-Hint Constructors typing_c.
+Hint Constructors typing_c : core.
 
 
 (*************************************************************************)
@@ -1121,9 +1125,8 @@ Admitted.
     gets stuck, as can be seen by examining each of the cases in
     the proof below.
 
-    Note: To view subgoal n in a proof, use the command "[Show n]".
-    To work on subgoal n instead of the first one, use the command
-    "[Focus n]".
+    Note: To view subgoal n in a proof, use the command "n : { ... }".
+
 *)
 
 Lemma typing_weakening_strengthened_0 : forall (E F G : env) e T,
@@ -1135,7 +1138,7 @@ Proof.
   induction H.
   Case "typing_var_c".
     (* The E0 looks strange in the [typing_var_c] case. *)
-  Focus 2.
+  2 : {
   Case "typing_abs_c".
     (* The [typing_abs_c] case still does not have a strong enough IH. *)
 Admitted.
@@ -1393,7 +1396,7 @@ Inductive eval_c : exp -> exp -> Prop :=
     by Coq's [auto] and [eauto] tactics.
 *)
 
-Hint Constructors value_c eval_c.
+Hint Constructors value_c eval_c : core.
 
 
 (*************************************************************************)
@@ -1621,7 +1624,7 @@ Inductive eval : exp -> exp -> Prop :=
       eval e2 e2' ->
       eval (app e1 e2) (app e1 e2').
 
-Hint Constructors typing value eval.
+Hint Constructors typing value eval : core.
 
 (*************************************************************************)
 (** * Equivalence of Exists-Fresh and Cofinite Definitions *)

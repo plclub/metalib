@@ -22,6 +22,8 @@ Require Export Metalib.MetatheoryAtom.
 (** Common set operations and constants may be written using more
     convenient notations. *)
 
+Declare Scope set_scope.
+
 Notation "E [=] F" :=
   (AtomSetImpl.Equal E F)
   (at level 70, no associativity)
@@ -39,6 +41,8 @@ Notation "{}" :=
 Notation "{{  x  }}" :=
   (AtomSetImpl.singleton x)
   : set_scope.
+
+Declare Scope set_hs_scope.
 
 Notation "x `in` E" :=
   (AtomSetImpl.In x E)
@@ -111,6 +115,8 @@ Tactic Notation "env" "induction" ident(E) "as" simple_intropattern(P) :=
     Implementation note: The following notation overlaps with the
     standard recursive notation for lists, e.g., the one found in the
     Program library of Coq's standard library. *)
+
+Declare Scope env_scope.
 
 Notation "[ x ]" := (EnvImpl.one x) : env_scope.
 
@@ -218,9 +224,9 @@ Ltac hint_extern_solve_notin :=
                ];
   try tauto.
 
-Hint Extern 1 (_ <> _ :> _) => hint_extern_solve_notin.
+Hint Extern 1 (_ <> _ :> _) => hint_extern_solve_notin : core.
 
-Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin.
+Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin : core.
 
 (** The next block of hints are occasionally useful when reasoning
     about finite sets.  In some instances, they obviate the need to
@@ -229,7 +235,7 @@ Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin.
 Hint Resolve
   AtomSetImpl.add_1 AtomSetImpl.add_2 AtomSetImpl.remove_1
   AtomSetImpl.remove_2 AtomSetImpl.singleton_2 AtomSetImpl.union_2
-  AtomSetImpl.union_3 AtomSetImpl.inter_3 AtomSetImpl.diff_3.
+  AtomSetImpl.union_3 AtomSetImpl.inter_3 AtomSetImpl.diff_3 : core.
 
 (* ********************************************************************** *)
 (** * Decidable equality *)
@@ -262,6 +268,8 @@ Notation "x  ===  y" :=
   (x == y)
   (at level 70, only parsing)
   : coqeqdec_scope.
+
+Declare Scope set_sl_scope.
 
 Notation "x \in s" :=
   (x `in` s)

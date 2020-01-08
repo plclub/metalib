@@ -21,10 +21,13 @@ Require Import Coq.Lists.List.
 Require Import Coq.Logic.Decidable.
 Require Import Coq.Strings.String.
 
+Require Import String.
+
 Require Import Metalib.CoqFSetDecide.
 Require Import Metalib.CoqListFacts.
 Require Import Metalib.LibTactics.
 Require Import Metalib.CoqFSetInterface.
+
 
 
 (* *********************************************************************** *)
@@ -832,16 +835,16 @@ End BindsProperties2.
 (** * Hints *)
 
 Hint Resolve
-  @app_assoc @app_nil_2 @map_app @dom_one @dom_cons @dom_app @dom_map.
+  @app_assoc @app_nil_2 @map_app @dom_one @dom_cons @dom_app @dom_map : core.
 
 Hint Resolve
   @disjoint_sym_1 @disjoint_nil_1 @disjoint_one_2 @disjoint_cons_3
   @disjoint_app_3 @disjoint_map_2 @uniq_nil @uniq_push @uniq_one_1
-  @uniq_cons_3 @uniq_app_4 @uniq_map_2.
+  @uniq_cons_3 @uniq_app_4 @uniq_map_2 : core.
 
 Hint Resolve
   @binds_one_3 @binds_cons_2 @binds_cons_3 @binds_app_2 @binds_app_3
-  @binds_map_2.
+  @binds_map_2 : core.
 
 
 (* *********************************************************************** *)
@@ -1247,14 +1250,14 @@ End BindsDerived.
 (* *********************************************************************** *)
 (** * Hints *)
 
-Hint Resolve @nil_neq_one_mid @one_mid_neq_nil.
+Hint Resolve @nil_neq_one_mid @one_mid_neq_nil : core.
 
-Hint Resolve @uniq_insert_mid @uniq_map_app_l.
+Hint Resolve @uniq_insert_mid @uniq_map_app_l : core.
 
-Hint Immediate @uniq_remove_mid.
+Hint Immediate @uniq_remove_mid : core.
 
-Hint Resolve @binds_weaken.
+Hint Resolve @binds_weaken : core.
 
-Hint Immediate @binds_remove_mid @binds_In.
+Hint Immediate @binds_remove_mid @binds_In : core. 
 
 End Make.
