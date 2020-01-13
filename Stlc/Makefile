@@ -77,8 +77,8 @@ Stlc_inf.v: stlc.ott Makefile
 # Target to be called with some filename appended to it
 # It is a quick hack to fix the imports to metalib
 METALIB.FIX_%:
-	sed -i -e 's/Metatheory/Metalib.Metatheory/g' $*.v
-	sed -i -e 's/LibLNgen/Metalib.LibLNgen/g' $*.v
+	sed -i -e 's/ Metatheory/ Metalib.Metatheory/g' $*.v
+	sed -i -e 's/ LibLNgen/ Metalib.LibLNgen/g' $*.v
 	sed '1d' $*.v > __TMP__; mv __TMP__ $*.v
 
 paperclean:
