@@ -46,8 +46,12 @@ Ltac generalize_wrt x :=
     over should come first. *)
 
 Ltac apply_mutual_ind ind :=
-  let H := fresh in
-  first [ (* apply ind
+  match goal with 
+     [ |- (and _ _) ]  => apply ind 
+   | [ |- (prod _ _) ]  => apply ind 
+   | _ => 
+     let H := fresh in
+     first [ (* apply ind
         | *) intros H; induction H using ind
         | intros ? H; induction H using ind
         | intros ? ? H; induction H using ind
@@ -57,7 +61,8 @@ Ltac apply_mutual_ind ind :=
         | intros ? ? ? ? ? ? H; induction H using ind
         | intros ? ? ? ? ? ? ? H; induction H using ind
         | intros ? ? ? ? ? ? ? ? H; induction H using ind
-        ].
+        ]
+     end.
 
 (** Renames the last hypothesis to the given identifier. *)
 
