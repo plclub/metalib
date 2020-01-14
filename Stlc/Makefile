@@ -34,8 +34,8 @@ zipclean:
 
 clean: Stlc.mk paperclean zipclean
 	make -f Stlc.mk clean
-	rm -f Stlc.mk
-	rm -f *.cmi *.cmo coqsplit
+	rm -f Stlc.mk*
+	rm -f *.cmi *.cmo coqsplit *_full* *_sol* *.v-e
 
 
 coq: $(GENCOQ) Stlc.mk

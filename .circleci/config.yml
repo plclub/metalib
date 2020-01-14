@@ -16,13 +16,13 @@ defaults: &defaults
       command: opam install .
   - run:
       name: Fsub
-      command: make -C Fsub
+      command: make -k -C Fsub
   - run:
       name: Tutorial
-      command: make -C Tutorial
+      command: make -k -C Tutorial
   - run:
       name: Stlc
-      command: make -C Stlc
+      command: make -k -C Stlc -B
 
 jobs:
   coq.8.10:
