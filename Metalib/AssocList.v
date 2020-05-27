@@ -9,7 +9,13 @@
 
    With contributions from:
      Edsko de Vries:
-       uniq_reorder_1, uniq_reorder_2, binds_In_inv *)
+       uniq_reorder_1, uniq_reorder_2, binds_In_inv
+
+     Stephanie Weirich:
+       uniq_mid, binds_split, uniq_align_eq
+
+
+ *)
 
 (** remove printing ~ *)
 
@@ -634,6 +640,8 @@ Section UniqProperties.
     uniq (map f E) <-> uniq E.
   Proof. clear. intuition auto using uniq_map_1, uniq_map_2. Qed.
 
+
+
 End UniqProperties.
 
 
@@ -1244,6 +1252,24 @@ Section BindsDerived.
     solve_uniq.
   Qed.
 
+
+  (* If x is in an environment, it is either in the front half or 
+   the back half. *)            
+  Lemma binds_split : binds x a G -> exists G1 G2, G = G2 ++ one (x, a) ++ G1.
+  Proof.
+    clear. intro HB. induction G.
+    + inversion HB.
+    + destruct a0 as [y b].
+      apply binds_cons_1 in HB.
+      destruct HB as [[E1 E2]|E]. subst.
+      ++ exists l. exists nil. simpl_alist. auto.
+      ++ destruct (IHl E) as [G1 [G2 E2]].
+         subst.
+         eexists. exists ((y ~ b) ++ G2). simpl_alist. 
+         eauto.
+  Qed.
+
+
 End BindsDerived.
 
 
@@ -1259,5 +1285,73 @@ Hint Immediate @uniq_remove_mid : core.
 Hint Resolve @binds_weaken : core.
 
 Hint Immediate @binds_remove_mid @binds_In : core. 
+
+
+(* Facts about uniq alists of the form E ++ (x ~ a) ++ F. *)
+
+Section UniqMid.
+  Variables A B   : Type.
+  Variables f     : A -> B.
+  Variables x y   : X.t.
+  Variables a     : A.
+  Variables E F   : list (X.t*A).
+
+   (* If we have identified a variable in the middle of a uniq environment, 
+   it fixes the front and back. *)
+  Lemma uniq_mid : forall b E' F',
+    uniq (E ++ (x ~ a) ++ F) -> 
+    (E ++ x ~ a ++ F) = (E' ++ x ~ b ++ F') ->
+    E = E' /\ a = b /\ F = F'.
+  Proof.  
+    generalize F a. clear. 
+    induction E.
+  + intros.
+    destruct E'; inversion H0; simpl_alist in *. auto.
+    subst. destruct_uniq. fsetdec.
+  + intros.
+    destruct a as [y b0].
+    simpl_alist in *.
+    destruct_uniq.
+    assert (NE: not (y = x)). fsetdec.
+    destruct E' as [|[z c]]. simpl_alist in H0. inversion H0. subst. contradiction.
+    inversion H0. subst.
+    simpl_alist in *.
+    specialize (IHl F a0 b E' F').
+    destruct IHl as [E1 [E2 E3]]; auto.
+    subst. auto.
+   Qed.
+
+
+
+  (* If we divide up an alist containing a variable, it either appears in the 
+     front half or the back half *)
+  Lemma uniq_align_eq : forall E' F',
+    uniq (E ++ x ~ a ++ F) ->
+    E ++ x ~ a ++ F = E' ++ F' ->
+    (exists E1 E2, E' = E1 ++ x ~ a ++ E2 /\ E = E1 /\ F = E2 ++ F') \/
+    (exists F1 F2, F' = F1 ++ x ~ a ++ F2 /\ E = E' ++ F1 /\ F = F2). 
+   Proof.
+     clear.
+     intros E' F' U Eq.
+     assert (HB: binds x a (E' ++ F')). { rewrite <- Eq. auto. }
+     rewrite -> binds_app_iff in HB.
+     destruct HB as [h1|h1]. 
+     + left.
+       destruct (binds_split _ _ _ _ h1) as [G0'' [E1 E2]].
+       eexists. eexists. split. eauto.
+       subst.
+       simpl_alist in Eq.
+       edestruct (uniq_mid _ _ _ U Eq); eauto. tauto.
+     + right.
+       destruct (binds_split _ _ _ _ h1) as [G0'' [G0' E2]].
+       eexists. eexists. split. eauto.
+       subst.
+       rewrite <- (app_assoc _ E') in Eq.
+       edestruct (uniq_mid _ _ _ U Eq); eauto.
+       tauto.
+   Qed.
+
+End UniqMid.
+
 
 End Make.
