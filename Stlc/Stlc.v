@@ -111,28 +111,69 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 (** infrastructure *)
 Hint Constructors typing step lc_exp : core.
 
+Inductive step_count : exp -> exp -> nat -> Prop :=
+  | sc_base : forall (e:exp),
+    step_count e e 0
+  | sc_ind : forall (e1 e2 e3:exp) (n:nat),
+    step e1 e2 ->
+    step_count e2 e3 n ->
+    step_count e1 e3 (S n).
 
-Inductive strong_norm : exp -> Prop := (* TODO fix *)
-  | sn_v : forall (e1:exp),
-    strong_norm e1.
+Inductive bounded_reduction : exp -> nat -> Prop :=
+  | bound : forall (e1:exp) (v:nat),
+    (forall (e2:exp) (n:nat), step_count e1 e2 n -> n < v) ->
+    bounded_reduction e1 v.
+
+Inductive strong_norm : exp -> Prop :=
+  | sn_bound : forall (e:exp) (v:nat),
+    bounded_reduction e v ->
+    strong_norm e.
+
+(* Theorem sn_arrow : forall (G:ctx) (e:exp) (U V:typ),
+  typing G e (typ_arrow U V) ->
+  (forall (u:exp),
+    typing G u U -> strong_norm u ->
+    typing G (app e u) V ->
+    strong_norm (app e u)) ->
+  strong_norm e.
+Proof.
+  intros G e U V Ht Hu.
+  assert (Hsn: strong_norm (app e (var_b 5))).
+  {
+    apply Hu.
+
+  } *)
+  
+  
 
 Inductive reducible : typ -> exp -> Prop :=
   | red_arrow : forall (G:ctx) (e:exp) (U V:typ),
     typing G e (typ_arrow U V) ->
-    forall (u:exp), 
-      reducible U u -> reducible V (app e u) ->
+    (forall (u:exp), 
+      strong_norm u -> reducible V (app e u)) ->
     reducible (typ_arrow U V) e
   | red_atom : forall (G:ctx) (e:exp),
     typing G e typ_base ->
     strong_norm e ->
     reducible typ_base e.
 
+Theorem all_types_inhabited : forall (T:typ),
+  exists (G:ctx) (e:exp),
+  typing G e T.
+Proof.
+  intros.
+  exists [(fresh nil, T)].
+  exists (var_f (fresh nil)).
+  auto. Qed.
+
 Theorem sn_red: forall (G:ctx) (T:typ) (e:exp),
   typing G e T ->
-  strong_norm e ->
-  reducible T e.
+  reducible T e ->
+  strong_norm e.
 Proof.
   induction T.
-  - intros e. apply red_atom.
-  - intros e Ht Hsn.
-    apply red_arrow with G e T1 T2 in Ht.
+  - intros e Ht Hr.
+    inversion Hr; subst; auto. 
+  - intros t Htt Hrt.
+    inversion Hrt; subst.
+    
