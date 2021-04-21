@@ -112,9 +112,52 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 Hint Constructors typing step lc_exp : core.
 
 
-Inductive strong_norm : exp -> Prop := (* TODO fix *)
-  | sn_v : forall (e1:exp),
-    strong_norm e1.
+Definition norm (e : exp) : Prop :=
+  (~ exists e2, step e e2).
+
+Theorem test : norm (app (var_b 1) (var_b 2)).
+Proof.
+unfold norm. unfold not. intros. destruct H.
+  inversion H. inversion H4.
+Qed.
+
+
+(*Inductive norm: exp -> Prop :=
+  | norm_b : forall (n : nat), norm (var_b n)
+  | norm_f : forall (x : var), norm (var_f x)
+  | norm_fabs : forall (x : var), norm (var_f x)
+  | norm_f : forall (x : var), norm (var_f x) 
+Girard defines norm as not containing any (abs (app e1) e2) but the above definition is simpler. Decide later what to use*)
+
+Inductive step_count : exp -> nat -> Prop := (*count!*)
+  | count_b : forall (e:exp), norm e -> step_count e 0
+  | count_step : forall (e e2:exp) (n:nat), step e e2 -> step_count e2 (n - 1) -> step_count e n.
+
+Lemma norm_b : forall (x:nat), norm (var_b x).
+Proof.
+intros. unfold norm. unfold not. intros. destruct H. inversion H. Qed. 
+
+Lemma norm_v : forall (x:var), norm (var_f x).
+Proof.
+intros. unfold norm. unfold not. intros. destruct H. inversion H. Qed. 
+
+Theorem test_step_count : forall (x : var), step_count (app (abs (var_f x)) (var_f x)) 1.
+Proof.
+intros. eapply count_step. apply step_beta.
+apply lc_abs. intros.
+  - simpl. unfold open_exp_wrt_exp. unfold open_exp_wrt_exp_rec. auto.
+  - auto.
+  - simpl.  unfold open_exp_wrt_exp. unfold open_exp_wrt_exp_rec. apply count_b.  apply norm_v.
+Qed.
+Definition strong_norm  (e : exp) : Prop :=
+exists n, step_count e n.
+Fixpoint reducible (T : typ) (e : exp) : Prop :=
+  match T with
+  | typ_base => strong_norm e
+  | typ_arrow T1 T2 => (forall (e2: exp) , reducible T1 e2 -> reducible T2  (app e e2))
+end.
+
+
 
 Inductive reducible : typ -> exp -> Prop :=
   | red_arrow : forall (G:ctx) (e:exp) (U V:typ),
