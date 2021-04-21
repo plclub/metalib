@@ -112,3 +112,27 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 Hint Constructors typing step lc_exp : core.
 
 
+Inductive strong_norm : exp -> Prop := (* TODO fix *)
+  | sn_v : forall (e1:exp),
+    strong_norm e1.
+
+Inductive reducible : typ -> exp -> Prop :=
+  | red_arrow : forall (G:ctx) (e:exp) (U V:typ),
+    typing G e (typ_arrow U V) ->
+    forall (u:exp), 
+      reducible U u -> reducible V (app e u) ->
+    reducible (typ_arrow U V) e
+  | red_atom : forall (G:ctx) (e:exp),
+    typing G e typ_base ->
+    strong_norm e ->
+    reducible typ_base e.
+
+Theorem sn_red: forall (G:ctx) (T:typ) (e:exp),
+  typing G e T ->
+  strong_norm e ->
+  reducible T e.
+Proof.
+  induction T.
+  - intros e. apply red_atom.
+  - intros e Ht Hsn.
+    apply red_arrow with G e T1 T2 in Ht.
