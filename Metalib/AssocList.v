@@ -842,14 +842,17 @@ End BindsProperties2.
 (* *********************************************************************** *)
 (** * Hints *)
 
+#[global]
 Hint Resolve
   @app_assoc @app_nil_2 @map_app @dom_one @dom_cons @dom_app @dom_map : core.
 
+#[global]
 Hint Resolve
   @disjoint_sym_1 @disjoint_nil_1 @disjoint_one_2 @disjoint_cons_3
   @disjoint_app_3 @disjoint_map_2 @uniq_nil @uniq_push @uniq_one_1
   @uniq_cons_3 @uniq_app_4 @uniq_map_2 : core.
 
+#[global]
 Hint Resolve
   @binds_one_3 @binds_cons_2 @binds_cons_3 @binds_app_2 @binds_app_3
   @binds_map_2 : core.
@@ -1276,14 +1279,19 @@ End BindsDerived.
 (* *********************************************************************** *)
 (** * Hints *)
 
+#[global]
 Hint Resolve @nil_neq_one_mid @one_mid_neq_nil : core.
 
+#[global]
 Hint Resolve @uniq_insert_mid @uniq_map_app_l : core.
 
+#[global]
 Hint Immediate @uniq_remove_mid : core.
 
+#[global]
 Hint Resolve @binds_weaken : core.
 
+#[global]
 Hint Immediate @binds_remove_mid @binds_In : core. 
 
 

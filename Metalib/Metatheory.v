@@ -224,14 +224,17 @@ Ltac hint_extern_solve_notin :=
                ];
   try tauto.
 
+#[global]
 Hint Extern 1 (_ <> _ :> _) => hint_extern_solve_notin : core.
 
+#[global]
 Hint Extern 1 (_ `notin` _) => hint_extern_solve_notin : core.
 
 (** The next block of hints are occasionally useful when reasoning
     about finite sets.  In some instances, they obviate the need to
     use [auto with set]. *)
 
+#[global]
 Hint Resolve
   AtomSetImpl.add_1 AtomSetImpl.add_2 AtomSetImpl.remove_1
   AtomSetImpl.remove_2 AtomSetImpl.singleton_2 AtomSetImpl.union_2

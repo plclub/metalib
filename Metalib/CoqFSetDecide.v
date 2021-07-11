@@ -451,6 +451,7 @@ the above form:
     (** Here is the tactic that will throw away hypotheses that
         are not useful (for the intended scope of the [fsetdec]
         tactic). *)
+    #[global]
     Hint Constructors FSet_elt_Prop FSet_Prop : FSet_Prop.
     Ltac discard_nonFSet :=
       repeat (
@@ -492,6 +493,7 @@ the above form:
 
     (** The hint database [FSet_decidability] will be given to
         the [push_neg] tactic from the module [Negation]. *)
+    #[global]
     Hint Resolve dec_In dec_eq : FSet_decidability.
 
     (** ** Normalizing Propositions About Equality
@@ -631,8 +633,10 @@ the above form:
     (** Here is the crux of the proof search.  Recursion through
         [intuition]!  (This will terminate if I correctly
         understand the behavior of [intuition].) *)
+    #[global]
     Hint Resolve E.eq_refl : FSet_Auto.
     (* SCW: to change to MSets, replace with this.
+    #[global]
     Hint Resolve (E.eq_equiv.(@Equivalence_Reflexive _ _)) : FSet_Auto. *)
     Ltac fsetdec_rec :=
       auto with FSet_Auto;

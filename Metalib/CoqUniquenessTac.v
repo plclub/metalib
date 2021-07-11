@@ -10,7 +10,7 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
 
-Require Import Coq.omega.Omega.
+Require Import Lia.
 
 
 (* *********************************************************************** *)
@@ -105,6 +105,7 @@ Lemma eq_pair_dec : forall (A B : Type),
   (forall x y : A * B, {x = y} + {x <> y}).
 Proof. decide equality. Qed.
 
+#[global]
 Hint Resolve eq_unit_dec eq_pair_dec : eq_dec.
 
 

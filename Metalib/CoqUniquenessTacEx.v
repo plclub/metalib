@@ -7,7 +7,7 @@
 
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Lists.SetoidList.
-Require Import Coq.omega.Omega.
+Require Import Lia.
 
 Require Import Metalib.CoqUniquenessTac.
 
@@ -18,6 +18,7 @@ Require Import Metalib.CoqUniquenessTac.
 (** The examples go through more smoothly if we declare [eq_nat_dec]
     as a hint. *)
 
+#[global]
 Hint Resolve eq_nat_dec : eq_dec.
 
 
@@ -30,7 +31,7 @@ Lemma le_unique : forall (x y : nat) (p q: x <= y), p = q.
 Proof.
   induction p using le_ind';
   uniqueness 1;
-  assert False by omega; intuition.
+  assert False by lia; intuition.
 
 Qed.
 

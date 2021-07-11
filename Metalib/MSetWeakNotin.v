@@ -146,6 +146,7 @@ End Lemmas.
 (* *********************************************************************** *)
 (** * Hints *)
 
+#[global]
 Hint Resolve
   @notin_empty_1 @notin_add_3 @notin_singleton_2 @notin_remove_2
   @notin_remove_3 @notin_remove_3' @notin_union_3 @notin_inter_2
@@ -212,7 +213,9 @@ Ltac destruct_notin :=
     then tries some simple heuristics for solving the resulting
     goals. *)
 
+#[global]
 Hint Resolve (E.eq_equiv.(@Equivalence_Reflexive _ _)) : Auto_notin.
+#[global]
 Hint Immediate (E.eq_equiv.(@Equivalence_Symmetric _ _)) : Auto_notin.
 
 Ltac solve_notin :=
