@@ -458,7 +458,7 @@ Inductive lc : exp -> Prop :=
       lc e1 -> lc e2 ->
       lc (app e1 e2).
 
-Hint Constructors lc : core.
+#[export] Hint Constructors lc : core.
 
 
 (*************************************************************************)
@@ -759,7 +759,7 @@ Inductive lc_c : exp -> Prop :=
       lc_c e2 ->
       lc_c (app e1 e2).
 
-Hint Constructors lc_c : core.
+#[export] Hint Constructors lc_c : core.
 
 (* Reintroduce notation for [open_rec] so that we can reprove
    properties about it and the new version of lc_c. *)
@@ -1084,7 +1084,7 @@ Inductive typing_c : env -> exp -> typ -> Prop :=
     by the [auto] and [eauto] tactics.
 *)
 
-Hint Constructors typing_c : core.
+#[export] Hint Constructors typing_c : core.
 
 
 (*************************************************************************)
@@ -1396,7 +1396,7 @@ Inductive eval_c : exp -> exp -> Prop :=
     by Coq's [auto] and [eauto] tactics.
 *)
 
-Hint Constructors value_c eval_c : core.
+#[export] Hint Constructors value_c eval_c : core.
 
 
 (*************************************************************************)
@@ -1624,7 +1624,7 @@ Inductive eval : exp -> exp -> Prop :=
       eval e2 e2' ->
       eval (app e1 e2) (app e1 e2').
 
-Hint Constructors typing value eval : core.
+#[export] Hint Constructors typing value eval : core.
 
 (*************************************************************************)
 (** * Equivalence of Exists-Fresh and Cofinite Definitions *)
