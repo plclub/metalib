@@ -1,4 +1,4 @@
-coq_version = 8.9
+coq_version = 8.10
 
 # Retrieving the (short) hash of the current commit, as revision number
 commit_hash := $(shell git rev-parse --short HEAD)
