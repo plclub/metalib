@@ -10,7 +10,7 @@
 
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Tactics.
-Require Import Coq.omega.Omega.
+Require Import Lia.
 
 
 (* *********************************************************************** *)
@@ -182,7 +182,7 @@ Ltac default_step :=
     | find_easy_inversion
     | destruct_exists
     | progress default_autorewrite
-    | solve [let H := fresh in assert (H : False) by omega; elim H]
+    | solve [let H := fresh in assert (H : False) by lia; elim H]
     ].
 
 (** [default_case_split] is similar to [default_step], except that the

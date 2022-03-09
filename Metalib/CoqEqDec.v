@@ -15,8 +15,11 @@ Require Import Coq.Logic.Decidable.
 (* *********************************************************************** *)
 (** * Hints for [equiv] *)
 
+#[global]
 Hint Extern 0 (?x === ?x) => reflexivity : core. 
+#[global]
 Hint Extern 1 (_ === _) => (symmetry; trivial; fail) : core.
+#[global]
 Hint Extern 1 (_ =/= _) => (symmetry; trivial; fail) : core.
 
 

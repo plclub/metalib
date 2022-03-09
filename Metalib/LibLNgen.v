@@ -9,7 +9,7 @@
 
 Require Export Metalib.LibDefaultSimp.
 Require Import Metalib.Metatheory.
-Require Import Omega.
+Require Import Lia.
 
 
 (* ********************************************************************** *)
@@ -46,10 +46,10 @@ Ltac generalize_wrt x :=
     over should come first. *)
 
 Ltac apply_mutual_ind ind :=
-  match goal with 
-     [ |- (and _ _) ]  => apply ind 
-   | [ |- (prod _ _) ]  => apply ind 
-   | _ => 
+  match goal with
+     [ |- (and _ _) ]  => apply ind
+   | [ |- (prod _ _) ]  => apply ind
+   | _ =>
      let H := fresh in
      first [ (* apply ind
         | *) intros H; induction H using ind
@@ -127,18 +127,29 @@ Proof. fsetdec. Qed.
 (* *********************************************************************** *)
 (** * Hints *)
 
+#[global]
 Hint Resolve sym_eq : brute_force.
 
-Hint Extern 5 (_ = _ :> nat) => omega : brute_force.
-Hint Extern 5 (_ < _)        => omega : brute_force.
-Hint Extern 5 (_ <= _)       => omega : brute_force.
+#[global]
+Hint Extern 5 (_ = _ :> nat) => lia : brute_force.
+#[global]
+Hint Extern 5 (_ < _)        => lia : brute_force.
+#[global]
+Hint Extern 5 (_ <= _)       => lia : brute_force.
 
 Hint Rewrite @remove_union_distrib : lngen.
 
+#[global]
 Hint Resolve @Equal_union_compat : lngen.
+#[global]
 Hint Resolve @Subset_refl : lngen.
+#[global]
 Hint Resolve @Subset_empty_any : lngen.
+#[global]
 Hint Resolve @Subset_union_compat : lngen.
+#[global]
 Hint Resolve @Subset_union_left : lngen.
+#[global]
 Hint Resolve @Subset_union_right : lngen.
+#[global]
 Hint Resolve @Subset_union_lngen_open_upper : lngen.
