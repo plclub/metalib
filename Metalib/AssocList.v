@@ -17,6 +17,8 @@
 
  *)
 
+
+
 (** remove printing ~ *)
 
 (** A library for association lists, i.e., lists of pairs *)
@@ -34,6 +36,12 @@ Require Import Metalib.CoqListFacts.
 Require Import Metalib.LibTactics.
 Require Import Metalib.CoqFSetInterface.
 
+
+(* Suppress warnings about Hint Resolve *)
+Local Set Warnings "-fragile-hint-constr".
+
+(* This hint database is used to normalize association lists via rewriting. *)
+Create HintDb rewr_list.
 
 
 (* *********************************************************************** *)
@@ -86,9 +94,9 @@ Module Make
   (KeySet : FSetInterface.WSfun X).
 
 (* SCW: Make an instance of EqDef_eq for X so that we can use the "==" in [get] below. *)
-Instance EqDec_of_X : @EqDec X.t eq eq_equivalence.
+#[export] Instance EqDec_of_X : @EqDec X.t eq eq_equivalence.
 Proof. exact X.eq_dec. Defined.
-Instance EqDec_eq_of_X: @EqDec_eq X.t.
+#[export] Instance EqDec_eq_of_X: @EqDec_eq X.t.
 Proof. exact (EqDec_eq_of_EqDec X.t EqDec_of_X). Defined.
 Open Scope coqeqdec_scope.
 
@@ -304,12 +312,12 @@ End Properties.
 
 (** Rewriting hints. *)
 
-Hint Rewrite cons_app_one cons_app_assoc      : rewr_list.
-Hint Rewrite app_assoc app_nil_1 app_nil_2    : rewr_list.
-Hint Rewrite in_nil_iff in_one_iff in_app_iff : rewr_list_in.
+#[export] Hint Rewrite cons_app_one cons_app_assoc      : rewr_list.
+#[export] Hint Rewrite app_assoc app_nil_1 app_nil_2    : rewr_list.
+#[export] Hint Rewrite in_nil_iff in_one_iff in_app_iff : rewr_list_in.
 
-Hint Rewrite map_nil map_one map_cons map_app         : rewr_map.
-Hint Rewrite dom_nil dom_one dom_cons dom_app dom_map : rewr_dom.
+#[export] Hint Rewrite map_nil map_one map_cons map_app         : rewr_map.
+#[export] Hint Rewrite dom_nil dom_one dom_cons dom_app dom_map : rewr_dom.
 
 (** The [simpl_alist] tactic rewrites association lists so that they
     are in the normal form described above.  Similar to the [simpl]
@@ -842,17 +850,17 @@ End BindsProperties2.
 (* *********************************************************************** *)
 (** * Hints *)
 
-#[global]
+#[export]
 Hint Resolve
   @app_assoc @app_nil_2 @map_app @dom_one @dom_cons @dom_app @dom_map : core.
 
-#[global]
+#[export]
 Hint Resolve
   @disjoint_sym_1 @disjoint_nil_1 @disjoint_one_2 @disjoint_cons_3
   @disjoint_app_3 @disjoint_map_2 @uniq_nil @uniq_push @uniq_one_1
   @uniq_cons_3 @uniq_app_4 @uniq_map_2 : core.
 
-#[global]
+#[export]
 Hint Resolve
   @binds_one_3 @binds_cons_2 @binds_cons_3 @binds_app_2 @binds_app_3
   @binds_map_2 : core.

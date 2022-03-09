@@ -121,7 +121,7 @@ Global Arguments Atom.eq /.
 
 (** It is trivial to declare an instance of [EqDec] for [atom]. *)
 
-Instance EqDec_atom : @EqDec atom eq eq_equivalence.
+#[export] Instance EqDec_atom : @EqDec atom eq eq_equivalence.
 Proof. exact Atom.eq_dec. Defined.
 
 
@@ -142,6 +142,7 @@ Notation atoms :=
 
 (** The [AtomSetDecide] module provides the [fsetdec] tactic for
     solving facts about finite sets of atoms. *)
+
 
 Module Export AtomSetDecide := Coq.FSets.FSetDecide.WDecide_fun Atom AtomSetImpl.
 

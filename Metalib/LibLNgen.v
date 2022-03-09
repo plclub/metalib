@@ -11,6 +11,9 @@ Require Export Metalib.LibDefaultSimp.
 Require Import Metalib.Metatheory.
 Require Import Lia.
 
+(* Suppress warnings about Hint Resolve *)
+Local Set Warnings "-fragile-hint-constr".
+
 
 (* ********************************************************************** *)
 (** * Assorted functions not in the standard library *)
@@ -78,6 +81,28 @@ Ltac specialize_all x :=
             | H : _ |- _ => specialize (H x)
           end).
 
+(** Specialize and dispatch freshness hypothesis. *)
+Ltac spec y := 
+  repeat (match goal with [H0 : forall x : atom, x \notin ?L -> _ |- _ ] => 
+     specialize (H0 y ltac:(auto)) end). 
+
+(* Destruct all hypotheses with conjunctions *)
+Ltac split_hyp :=
+  repeat (
+      match goal with
+        | [ H : _ /\ _ |- _ ] => destruct H
+      end).
+
+Ltac invert_equality := 
+  repeat match goal with 
+    | [H : (_,_) = (_,_) |- _ ] => inversion H; subst; clear H
+    | [H : (_,_,_) = (_,_,_) |- _ ] => inversion H; subst; clear H
+    | [H : (_,_,_,_) = (_,_,_,_) |- _ ] => inversion H; subst; clear H
+    | [H : [_] ++ _ = [_] ++ _ |- _ ] => inversion H; subst; clear H
+    | [H : ( _ :: _ ) = ( _ :: _ )  |- _ ] => inversion H; subst; clear H
+  end.
+
+
 
 (* *********************************************************************** *)
 (** * Facts about finite sets *)
@@ -137,8 +162,8 @@ Hint Extern 5 (_ < _)        => lia : brute_force.
 #[global]
 Hint Extern 5 (_ <= _)       => lia : brute_force.
 
+#[global]
 Hint Rewrite @remove_union_distrib : lngen.
-
 #[global]
 Hint Resolve @Equal_union_compat : lngen.
 #[global]

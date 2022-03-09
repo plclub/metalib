@@ -1,7 +1,6 @@
 (** Includes minor tweaks (mostly bug fixes?) by Brian Aydemir. *)
-(** SCW 06/06/17: updated to use Coq MSets instead of FSets.
-    This version is still more powerful than Coq.MSets.MSetDecide
-    fsetdec_rec / fsetdec_body are the big differences *)
+
+Create HintDb set_simpl.
 
 (***********************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team    *)
@@ -18,7 +17,6 @@
 (*                                                            *)
 (* Author: Aaron Bohannon                                     *)
 (**************************************************************)
-
 
 (** This file implements a decision procedure for a certain
     class of propositions involving finite sets.  *)
@@ -349,6 +347,8 @@ the above form:
       enclosing module [Decide].  *)
   Module FSetDecideAuxiliary.
 
+
+
     (** ** Generic Tactics
         We begin by defining a few generic, useful tactics. *)
 
@@ -470,7 +470,7 @@ the above form:
         variables.  We are going to use them with [autorewrite].
         *)
 
-    Hint Rewrite
+    #[global] Hint Rewrite
       F.empty_iff F.singleton_iff F.add_iff F.remove_iff
       F.union_iff F.inter_iff F.diff_iff
     : set_simpl.

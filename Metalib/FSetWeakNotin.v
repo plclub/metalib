@@ -17,6 +17,10 @@ Require Import Coq.FSets.FSetInterface.
 Require Import Metalib.CoqFSetDecide.
 
 
+(* Suppress warnings about Hint Resolve *)
+Local Set Warnings "-fragile-hint-constr".
+
+
 (* *********************************************************************** *)
 (** * Implementation *)
 
@@ -24,7 +28,6 @@ Module Notin_fun
   (E : DecidableType) (Import X : FSetInterface.WSfun E).
 
 Module Import D := CoqFSetDecide.WDecide_fun E X.
-
 
 (* *********************************************************************** *)
 (** * Facts about set non-membership *)
