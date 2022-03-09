@@ -109,6 +109,6 @@ Inductive step : exp -> exp -> Prop :=    (* defn step *)
 
 
 (** infrastructure *)
-Hint Constructors typing step lc_exp : core.
+#[export] Hint Constructors typing step lc_exp : core.
 
 

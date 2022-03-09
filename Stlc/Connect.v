@@ -111,8 +111,8 @@ Qed.
 
 (** As we prove new lemmas, we can also extend the hint database with new
     rewritings. *)
-Hint Rewrite fv_nom_fv_exp_eq : lngen.
-Hint Resolve fv_nom_fv_exp_eq : lngen.
+#[export] Hint Rewrite fv_nom_fv_exp_eq : lngen.
+#[export] Hint Resolve fv_nom_fv_exp_eq : lngen.
 
 
 (** The Metatheory library contains two powerful tactics for simplifying
@@ -132,9 +132,9 @@ Ltac default_autorewrite ::= autorewrite with lngen.
 (** We also add a few more rewriting lemmas to the hint database to
     automate our proofs. *)
 
-Hint Rewrite subst_exp_open_exp_wrt_exp : lngen.
-Hint Rewrite swap_size_eq : lngen.
-Hint Resolve le_S_n : lngen.
+#[export] Hint Rewrite subst_exp_open_exp_wrt_exp : lngen.
+#[export] Hint Rewrite swap_size_eq : lngen.
+#[export] Hint Resolve le_S_n : lngen.
 
 (***********************************************************************)
 (** ** Decoded terms are locally closed *)
@@ -150,14 +150,14 @@ Lemma nom_to_exp_lc : forall t, lc_exp (nom_to_exp t).
 Proof.
   induction t; default_steps.
 Qed.
-Hint Resolve nom_to_exp_lc : lngen.
+#[export] Hint Resolve nom_to_exp_lc : lngen.
 
 Lemma apply_heap_lc : forall h e,
     lc_exp e -> lc_exp (apply_heap h e).
 Proof.
   alist induction h; default_simp.
 Qed.
-Hint Resolve apply_heap_lc : lngen.
+#[export] Hint Resolve apply_heap_lc : lngen.
 
 (** *** Exercise: [apply_stack_lc]
 
@@ -171,7 +171,7 @@ Lemma apply_stack_lc : forall s h e,
 Proof.
   induction s; try destruct a; default_simp.
 Qed.
-Hint Resolve apply_stack_lc : lngen.
+#[export] Hint Resolve apply_stack_lc : lngen.
 (* /SOLUTION *)
 
 Lemma decode_lc : forall c, lc_exp (decode c).
@@ -196,7 +196,7 @@ Proof.
   alist induction h; default_simp.
 Qed.
 
-Hint Rewrite apply_heap_abs : lngen.
+#[export] Hint Rewrite apply_heap_abs : lngen.
 
 Lemma apply_heap_app : forall h e1 e2,
   apply_heap h (app e1 e2) = app (apply_heap h e1) (apply_heap h e2).
@@ -204,7 +204,7 @@ Proof.
   alist induction h; default_simp.
 Qed.
 
-Hint Rewrite apply_heap_app : lngen.
+#[export] Hint Rewrite apply_heap_app : lngen.
 
 
 (** *** Exercise: [apply_heap_open]
@@ -223,7 +223,7 @@ Proof.
   alist induction h; intros; default_simp.
 Qed. (* /ADMITTED *)
 
-Hint Rewrite apply_heap_open : lngen.
+#[export] Hint Rewrite apply_heap_open : lngen.
 
 (** This last lemma "unsimpl"s the [apply_heap] function. *)
 
@@ -324,7 +324,7 @@ Lemma swap_spec_aux : forall m t w y,
     nom_to_exp (swap w y t).
 Proof.
   induction m; intros t w y SZ;
-  destruct t; simpl in *; try omega;
+  destruct t; simpl in *; try lia;
   intros.
   + unfold swap_var; default_simp.
   + unfold swap_var; default_simp.
@@ -368,8 +368,8 @@ Proof.
        autorewrite with lngen in *.
        fsetdec.
     }
-  + rewrite IHm; auto; try omega; try fsetdec.
-    rewrite IHm; auto; try omega; try fsetdec.
+  + rewrite IHm; auto; try lia; try fsetdec.
+    rewrite IHm; auto; try lia; try fsetdec.
 Qed.
 
 Lemma swap_spec : forall t w y,
