@@ -24,7 +24,7 @@ SPLITTING
 CONTENTS
 
 Read through the tutorial files in this order. Some files have embedded
-exercises; their solutions are in the associated `sol` directory.
+exercises; their solutions are in the associated `_sol.v` file.
 
      Lec1_full.v       - First set of lecture notes, with exercises
                          about LN
