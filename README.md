@@ -6,8 +6,8 @@ COMPILATION, INSTALLATION, AND DOCUMENTATION:
   To compile the library, cd to the [Metalib](Metalib/) directory:
 
     `make`          generate Coq makefile, compile Coq files
-	  `make html`     generate Coq documentation
-	  `make install`  install library on your system (locally)
+    `make doc`      generate Coq documentation
+    `make install`  install library on your system (locally)
 
   Note that both step 1 and 3 are needed in order to be able to run/compile
   the examples and the tutorial. In particular, step 3 only install the
