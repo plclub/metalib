@@ -6,7 +6,7 @@
      Brian Aydemir *)
 
 Require Import Coq.Arith.Peano_dec.
-Require Import Coq.Lists.SetoidList.
+Require Import Coq.Sorting.SetoidList.
 Require Import Lia.
 
 Require Import Metalib.CoqUniquenessTac.

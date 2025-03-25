@@ -8,7 +8,7 @@
 (** Assorted facts about lists. *)
 
 Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
+Require Import Coq.Sorting.SetoidList.
 
 Require Import Metalib.CoqUniquenessTac.
 
