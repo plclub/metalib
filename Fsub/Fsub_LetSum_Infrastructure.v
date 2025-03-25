@@ -604,7 +604,6 @@ Proof with eauto using subst_tt_type.
     intros;
     try rewrite subst_te_open_ee_var;
     try rewrite subst_te_open_te_var;
-    instantiate;
     eauto using subst_tt_type
   ].
 Qed.
@@ -625,7 +624,7 @@ Proof with auto.
     intros;
     try rewrite subst_ee_open_ee_var;
     try rewrite subst_ee_open_te_var;
-    instantiate;
+    idtac;
     auto
   ].
   Case "expr_var".
