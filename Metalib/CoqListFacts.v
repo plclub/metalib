@@ -199,7 +199,7 @@ Section SortedListEquality.
     Sort ys ->
     (forall a, In a xs <-> In a ys) ->
     xs = ys.
-  Proof with auto using In_InA, InA_In.
+  Proof with auto using In_InA, InA_In, eq_equivalence.
     intros ? ? ? ? H.
     apply Sort_InA_eq...
     intros a; specialize (H a).

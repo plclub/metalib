@@ -119,7 +119,7 @@ Proof with simpl_env; auto.
       rewrite_env (empty ++ Y ~ bind_sub T0 ++ E).
       apply (sub_narrowing_aux T1)...
       unfold transitivity_on.
-      auto using (IHW T1).
+      pose proof (IHW T1); eauto.
 Qed.
 
 Lemma sub_narrowing : forall Q E F Z P S T,
@@ -505,7 +505,7 @@ Proof with auto.
     split...
     exists T1. exists L...
   Case "typing_sub".
-    auto using (sub_transitivity T).
+    pose proof (sub_transitivity T); auto.
 Qed.
 
 Lemma typing_inv_tabs : forall E S1 e1 T,
@@ -531,7 +531,7 @@ Proof with simpl_env; auto.
     rewrite_env (empty ++ Y ~ bind_sub U1 ++ E).
     apply (typing_narrowing S1)...
   Case "typing_sub".
-    auto using (sub_transitivity T).
+    pose proof (sub_transitivity T); auto.
 Qed.
 
 Lemma typing_inv_inl : forall E e1 T,
@@ -543,7 +543,7 @@ Proof with eauto.
   remember (exp_inl e1) as e. generalize dependent e1.
   induction Typ; intros e' EQ U1 U2 Sub; inversion EQ; subst.
   Case "typing_sub".
-    eauto using (sub_transitivity T).
+    pose proof (sub_transitivity T); eauto.
   Case "typing_inl".
     inversion Sub; subst...
 Qed.
@@ -557,7 +557,7 @@ Proof with eauto.
   remember (exp_inr e1) as e. generalize dependent e1.
   induction Typ; intros e' EQ U1 U2 Sub; inversion EQ; subst.
   Case "typing_sub".
-    eauto using (sub_transitivity T).
+    pose proof (sub_transitivity T); eauto.
   Case "typing_inr".
     inversion Sub; subst...
 Qed.

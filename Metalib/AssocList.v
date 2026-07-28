@@ -128,7 +128,7 @@ Definition one (C : Type) (item : C) : list C := cons item nil.
 
 Notation "x ~ a" := (one (x, a)) (at level 50) : list_scope.
 
-Arguments app _%type_scope _%list_scope _%list_scope.
+Arguments app _%_type_scope _%_list_scope _%_list_scope.
 
 Open Scope list_scope.
 
@@ -243,7 +243,7 @@ Section ListProperties.
     List.In x (one y) <-> x = y.
   Proof.
     clear. split.
-      inversion 1 as [ | HIn]; intuition.
+      inversion 1 as [ | HIn]; [ intuition | simpl in HIn; contradiction ].
       constructor; intuition.
   Qed.
 
